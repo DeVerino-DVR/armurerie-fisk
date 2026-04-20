@@ -1,0 +1,1 @@
+# Test de sync\n\nCe dossier est créé pour vérifier que l'API GitHub fonctionne. Tu peux le supprimer quand tu as confirmé que la sync hebdomadaire marche depuis l'app.

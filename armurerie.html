@@ -295,11 +295,13 @@
         <input type="text" id="o-serie" class="shadcn-input">
       </div>
       <div>
-        <label class="shadcn-label">Réduction à la revente</label>
-        <select id="o-reduc" class="shadcn-input">
-          <option value="0">0%</option>
-          <option value="10">10%</option>
-          <option value="15">15%</option>
+        <label class="shadcn-label">Taux de reprise</label>
+        <select id="o-taux" class="shadcn-input">
+          <option value="40">40%</option>
+          <option value="45">45%</option>
+          <option value="50" selected>50%</option>
+          <option value="55">55%</option>
+          <option value="60">60%</option>
         </select>
       </div>
       <div>
@@ -356,7 +358,7 @@
         <table class="shadcn-table">
           <thead>
             <tr>
-              <th>Date</th><th>Armurier</th><th>Client</th><th>Arme</th><th>N° Série</th><th>Réduc</th><th class="text-right">Reprise</th><th class="text-right">Revente</th><th>Vendue</th><th>Infos</th><th></th>
+              <th>Date</th><th>Armurier</th><th>Client</th><th>Arme</th><th>N° Série</th><th>Taux</th><th class="text-right">Reprise</th><th class="text-right">Revente</th><th>Vendue</th><th>Infos</th><th></th>
             </tr>
           </thead>
           <tbody id="o-table"></tbody>

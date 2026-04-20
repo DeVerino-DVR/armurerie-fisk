@@ -285,8 +285,8 @@ function armesVenteOptions() {
 
 function armesOccasOptions() {
   return Object.entries(OCCAS).map(([nom, p]) => ({
-    value: JSON.stringify({nom, ...p}),
-    label: `${nom} (rachat ${fmt(p.rachat)} / revente ${fmt(p.revente)})`
+    value: JSON.stringify({nom, cat: p.cat}),
+    label: `${nom} (neuf ${fmt(p.cat)})`
   }));
 }
 
@@ -497,16 +497,15 @@ function refreshCustoms() {
 // ============================================================
 function occasCalc() {
   const selArme = document.getElementById("o-arme").value;
-  const reduc = Number(document.getElementById("o-reduc").value) || 0;
+  const taux = Number(document.getElementById("o-taux").value) || 50;
   if (!selArme) {
     document.getElementById("o-prix-reprise").value = "";
     document.getElementById("o-prix-revente").value = "";
     return;
   }
-  const {rachat, revente} = JSON.parse(selArme);
-  document.getElementById("o-prix-reprise").value = rachat.toFixed(2);
-  const finalRevente = revente * (1 - reduc/100);
-  document.getElementById("o-prix-revente").value = finalRevente.toFixed(2);
+  const {cat} = JSON.parse(selArme);
+  document.getElementById("o-prix-reprise").value = (cat * (taux / 100)).toFixed(2);
+  document.getElementById("o-prix-revente").value = (cat * 0.85).toFixed(2);
 }
 
 function addOccas() {
@@ -514,8 +513,8 @@ function addOccas() {
   const vendeur = document.getElementById("o-vendeur").value;
   if (!selArme) { alert("Choisissez une arme"); return; }
   if (!vendeur) { alert("Choisissez un armurier"); return; }
-  const {nom, rachat, revente} = JSON.parse(selArme);
-  const reduc = Number(document.getElementById("o-reduc").value) || 0;
+  const {nom, cat} = JSON.parse(selArme);
+  const taux = Number(document.getElementById("o-taux").value) || 50;
   data.occas.push({
     id: Date.now(),
     date: document.getElementById("o-date").value,
@@ -523,9 +522,9 @@ function addOccas() {
     client: document.getElementById("o-client").value,
     arme: nom,
     serie: document.getElementById("o-serie").value,
-    reduc,
-    prixReprise: rachat,
-    prixRevente: revente * (1 - reduc/100),
+    tauxReprise: taux,
+    prixReprise: cat * (taux / 100),
+    prixRevente: cat * 0.85,
     vendue: false,
     info: document.getElementById("o-info").value
   });
@@ -567,7 +566,7 @@ function refreshOccas() {
       <td>${o.client||""}</td>
       <td>${o.arme||""}</td>
       <td>${o.serie||""}</td>
-      <td>${o.reduc||0}%</td>
+      <td>${o.tauxReprise||50}%</td>
       <td>${fmt(o.prixReprise)}</td>
       <td><b>${fmt(o.prixRevente)}</b></td>
       <td><input type="checkbox" ${o.vendue?'checked':''} onchange="toggleOccasVendue(${o.id})"></td>
@@ -1092,7 +1091,7 @@ function refreshAll() {
 document.addEventListener("input", e => {
   if (["v-arme","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
-  if (["o-arme","o-reduc"].includes(e.target.id)) occasCalc();
+  if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
   if (["i-semaine","i-du","i-au","i-capital"].includes(e.target.id)) {
     data.impots.semaine = document.getElementById("i-semaine").value;
     data.impots.du = document.getElementById("i-du").value;
@@ -1105,7 +1104,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   if (["v-arme","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
-  if (["o-arme","o-reduc"].includes(e.target.id)) occasCalc();
+  if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
 });
 
 document.getElementById("v-search").addEventListener("input", refreshVentes);

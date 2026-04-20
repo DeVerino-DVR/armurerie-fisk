@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Armurerie · Gestion</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        }
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-zinc-950 text-zinc-50">
+
+<!-- HEADER -->
+<header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-zinc-50 to-zinc-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 16v-2M6 12H4m16 0h-2M7.76 7.76L6.34 6.34m11.32 11.32l-1.42-1.42M16.24 7.76l1.42-1.42M6.34 17.66l1.42-1.42"/>
+          <circle cx="12" cy="12" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-semibold tracking-tight">Carcan'hoes</h1>
+        <p class="text-xs text-zinc-400">Gestion de l'armurerie</p>
+      </div>
+    </div>
+    <div class="text-xs text-zinc-400 mono hidden sm:block" id="today-date"></div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="bg-zinc-900/80 backdrop-blur border-b border-zinc-800 sticky top-0 z-20">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="flex gap-1 overflow-x-auto py-2 bg-zinc-900 border border-zinc-800 rounded-lg p-1 my-3 max-w-fit" role="tablist">
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="ventes" data-state="active">Ventes</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="customs">Customs</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="occas">Armes d'occas</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="impots">Impôts / Bilan</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="params">Paramètres</button>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+<!-- ============================================================
+     VENTES
+     ============================================================ -->
+<section id="ventes" class="tab-content">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="flex items-start justify-between mb-5">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Nouvelle vente</h2>
+        <p class="text-sm text-zinc-400 mt-1">Enregistrez une vente d'arme au catalogue.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div>
+        <label class="shadcn-label">Date</label>
+        <input type="date" id="v-date" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Vendeur</label>
+        <select id="v-vendeur" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Client</label>
+        <input type="text" id="v-client" class="shadcn-input" placeholder="Prénom Nom">
+      </div>
+      <div>
+        <label class="shadcn-label">Numéro de série</label>
+        <input type="text" id="v-serie" class="shadcn-input" placeholder="1762xxx-xxxx">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="shadcn-label">Arme</label>
+        <select id="v-arme" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Quantité</label>
+        <input type="number" id="v-qte" value="1" min="1" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Prix catalogue</label>
+        <input type="number" id="v-prix-cat" readonly class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Réduction</label>
+        <select id="v-reduc" class="shadcn-input">
+          <option value="0">0%</option>
+          <option value="5">5%</option>
+          <option value="10">10%</option>
+          <option value="15">15%</option>
+        </select>
+      </div>
+      <div>
+        <label class="shadcn-label">Prix final</label>
+        <input type="number" id="v-prix-final" readonly class="shadcn-input">
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <button class="shadcn-btn shadcn-btn-primary" onclick="addVente()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Enregistrer la vente
+      </button>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Historique des ventes</h2>
+        <p class="text-sm text-zinc-400 mt-1">Toutes les ventes enregistrées <span class="badge badge-muted ml-2" id="v-count">0</span></p>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total</div>
+        <div class="stat-value" id="v-total">$0.00</div>
+      </div>
+    </div>
+    <input type="text" id="v-search" placeholder="Rechercher par client, arme, vendeur, série..." class="shadcn-input mb-4">
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <div class="overflow-auto max-h-[500px]">
+        <table class="shadcn-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Vendeur</th><th>Client</th><th>N° Série</th><th>Arme</th><th>Qté</th><th class="text-right">Prix</th><th>Réduc</th><th class="text-right">Final</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="v-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     CUSTOMS
+     ============================================================ -->
+<section id="customs" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-5">
+      <h2 class="text-xl font-semibold tracking-tight">Nouveau custom</h2>
+      <p class="text-sm text-zinc-400 mt-1">Entrez le coût de la customisation — le prix final et la part entreprise se calculent automatiquement.</p>
+    </div>
+
+    <div class="alert mb-5">
+      <strong>Calcul automatique :</strong> Prix final = coût × 1.25 · Part entreprise = coût × 0.25 (ce qui va dans le coffre).
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div>
+        <label class="shadcn-label">Date</label>
+        <input type="date" id="c-date" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Vendeur</label>
+        <select id="c-vendeur" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Client</label>
+        <input type="text" id="c-client" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Arme</label>
+        <input type="text" id="c-arme" class="shadcn-input" placeholder="Ex: Navy">
+      </div>
+      <div>
+        <label class="shadcn-label">Coût custom ($)</label>
+        <input type="number" id="c-cout" step="0.01" min="0" class="shadcn-input" placeholder="0.00">
+      </div>
+      <div>
+        <label class="shadcn-label">Réduction</label>
+        <select id="c-reduc" class="shadcn-input">
+          <option value="0">0%</option>
+          <option value="5">5%</option>
+          <option value="10">10%</option>
+          <option value="15">15%</option>
+        </select>
+      </div>
+      <div>
+        <label class="shadcn-label">Prix final (+25%)</label>
+        <input type="number" id="c-prix-final" readonly class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Part entreprise</label>
+        <input type="number" id="c-part-entreprise" readonly class="shadcn-input">
+      </div>
+      <div class="sm:col-span-2 lg:col-span-1">
+        <label class="shadcn-label">Notes</label>
+        <input type="text" id="c-info" class="shadcn-input" placeholder="Ex: Nacre crosse 3...">
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <button class="shadcn-btn shadcn-btn-primary" onclick="addCustom()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Enregistrer le custom
+      </button>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6">
+    <div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Historique des customs</h2>
+        <p class="text-sm text-zinc-400 mt-1">Tous les customs enregistrés <span class="badge badge-muted ml-2" id="c-count">0</span></p>
+      </div>
+      <div class="flex gap-3">
+        <div class="stat-card">
+          <div class="stat-label">Total facturé</div>
+          <div class="stat-value" id="c-total">$0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Coffre (25%)</div>
+          <div class="stat-value text-emerald-400" id="c-total-part">$0.00</div>
+        </div>
+      </div>
+    </div>
+    <input type="text" id="c-search" placeholder="Rechercher..." class="shadcn-input mb-4">
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <div class="overflow-auto max-h-[500px]">
+        <table class="shadcn-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Vendeur</th><th>Client</th><th>Arme</th><th class="text-right">Coût</th><th class="text-right">Prix final</th><th class="text-right">Part ent.</th><th>Réduc</th><th>Notes</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="c-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     OCCAS
+     ============================================================ -->
+<section id="occas" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-5">
+      <h2 class="text-xl font-semibold tracking-tight">Reprise d'arme</h2>
+      <p class="text-sm text-zinc-400 mt-1">L'arme reprise rejoint le stock d'occasion. Cochez "Vendue" quand vous la revendez.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div>
+        <label class="shadcn-label">Date de reprise</label>
+        <input type="date" id="o-date" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Armurier</label>
+        <select id="o-vendeur" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Client revendeur</label>
+        <input type="text" id="o-client" class="shadcn-input">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="shadcn-label">Arme reprise</label>
+        <select id="o-arme" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Numéro de série</label>
+        <input type="text" id="o-serie" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Réduction à la revente</label>
+        <select id="o-reduc" class="shadcn-input">
+          <option value="0">0%</option>
+          <option value="10">10%</option>
+          <option value="15">15%</option>
+        </select>
+      </div>
+      <div>
+        <label class="shadcn-label">Prix reprise</label>
+        <input type="number" id="o-prix-reprise" readonly class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Prix à revendre</label>
+        <input type="number" id="o-prix-revente" readonly class="shadcn-input">
+      </div>
+      <div class="sm:col-span-2 lg:col-span-3">
+        <label class="shadcn-label">Infos / customisations</label>
+        <input type="text" id="o-info" class="shadcn-input">
+      </div>
+    </div>
+
+    <div class="mt-6 flex justify-end">
+      <button class="shadcn-btn shadcn-btn-primary" onclick="addOccas()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Enregistrer la reprise
+      </button>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6">
+    <div class="flex items-center justify-between mb-4 gap-4 flex-wrap">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Stock d'occasion</h2>
+        <p class="text-sm text-zinc-400 mt-1">Armes reprises <span class="badge badge-muted ml-2" id="o-count">0</span></p>
+      </div>
+      <div class="flex gap-3 flex-wrap">
+        <div class="stat-card">
+          <div class="stat-label">Invendues</div>
+          <div class="stat-value" id="o-stock-count">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Coût reprise</div>
+          <div class="stat-value" id="o-stock-cout">$0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Potentiel revente</div>
+          <div class="stat-value text-emerald-400" id="o-stock-revente">$0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 mb-4">
+      <input type="checkbox" id="o-hide-sold">
+      <label for="o-hide-sold" class="text-sm text-zinc-400 cursor-pointer select-none">Masquer les armes déjà revendues</label>
+    </div>
+
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <div class="overflow-auto max-h-[500px]">
+        <table class="shadcn-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Armurier</th><th>Client</th><th>Arme</th><th>N° Série</th><th>Réduc</th><th class="text-right">Reprise</th><th class="text-right">Revente</th><th>Vendue</th><th>Infos</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="o-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     IMPOTS (page gardée comme la fiche originale)
+     ============================================================ -->
+<section id="impots" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-4">
+      <h2 class="text-xl font-semibold tracking-tight">Fiche récapitulative impôts</h2>
+      <p class="text-sm text-zinc-400 mt-1">Saisissez les informations de la semaine et les totaux se calculent automatiquement.</p>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <label class="shadcn-label">Semaine n°</label>
+        <input type="text" id="i-semaine" class="shadcn-input" placeholder="45">
+      </div>
+      <div>
+        <label class="shadcn-label">Du</label>
+        <input type="date" id="i-du" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Au</label>
+        <input type="date" id="i-au" class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Capital début de semaine</label>
+        <input type="number" id="i-capital" step="0.01" value="0" class="shadcn-input">
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+    <!-- Récapitulatif -->
+    <div class="shadcn-card p-6">
+      <h3 class="text-lg font-semibold tracking-tight mb-4">Récapitulatif</h3>
+      <div class="space-y-1">
+        <div class="recap-row"><span class="text-zinc-400">Capital début de semaine</span><span class="recap-value" id="r-capital">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Revenus dans l'état</span><span class="recap-value" id="r-revenus">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Revenus en export</span><span class="recap-value" id="r-export">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Salaires</span><span class="recap-value text-red-400" id="r-salaires">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Dépenses déductibles</span><span class="recap-value text-red-400" id="r-dep-ded">$0.00</span></div>
+        <div class="recap-row highlight"><span>Montant imposable</span><span class="recap-value" id="r-imposable">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Impôts à venir (50%)</span><span class="recap-value" id="r-impots">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Dépenses non déductibles</span><span class="recap-value text-red-400" id="r-dep-nonded">$0.00</span></div>
+        <div class="recap-row highlight"><span>Bilan</span><span class="recap-value" id="r-bilan">$0.00</span></div>
+        <div class="recap-row final"><span>Capital fin de semaine</span><span class="recap-value" id="r-capital-fin">$0.00</span></div>
+      </div>
+    </div>
+
+    <!-- Dépenses déductibles -->
+    <div class="shadcn-card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold tracking-tight">Dépenses déductibles</h3>
+          <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="dep-ded-total">$0.00</span></p>
+        </div>
+      </div>
+      <div class="space-y-3 mb-4">
+        <input type="date" id="dd-date" class="shadcn-input">
+        <input type="text" id="dd-lib" class="shadcn-input" placeholder="Libellé (Lingots, charbon...)">
+        <div class="flex gap-2">
+          <input type="number" id="dd-mnt" class="shadcn-input flex-1" placeholder="Montant" step="0.01">
+          <button class="shadcn-btn shadcn-btn-primary shadcn-btn-icon" onclick="addDepDed()" title="Ajouter">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-md border border-zinc-800">
+        <div class="overflow-auto max-h-64">
+          <table class="shadcn-table">
+            <thead><tr><th>Date</th><th>Libellé</th><th class="text-right">Montant</th><th></th></tr></thead>
+            <tbody id="dd-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Salaires -->
+    <div class="shadcn-card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold tracking-tight">Salaires</h3>
+          <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="sal-total">$0.00</span></p>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-md border border-zinc-800">
+        <div class="overflow-auto max-h-[500px]">
+          <table class="shadcn-table">
+            <thead>
+              <tr><th>#</th><th>Employé</th><th>Statut</th><th>Heures</th><th>Salaire</th><th>Prime</th><th class="text-right">Total</th></tr>
+            </thead>
+            <tbody id="sal-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dépenses non déductibles -->
+  <div class="shadcn-card p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-lg font-semibold tracking-tight">Dépenses non déductibles</h3>
+        <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="dep-nonded-total">$0.00</span></p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+      <input type="date" id="dnd-date" class="shadcn-input">
+      <input type="text" id="dnd-lib" class="shadcn-input sm:col-span-2" placeholder="Libellé">
+      <div class="flex gap-2">
+        <input type="number" id="dnd-mnt" class="shadcn-input flex-1" placeholder="Montant" step="0.01">
+        <button class="shadcn-btn shadcn-btn-primary shadcn-btn-icon" onclick="addDepNonDed()" title="Ajouter">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <div class="overflow-auto max-h-64">
+        <table class="shadcn-table">
+          <thead><tr><th>Date</th><th>Libellé</th><th class="text-right">Montant</th><th></th></tr></thead>
+          <tbody id="dnd-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PARAMETRES
+     ============================================================ -->
+<section id="params" class="tab-content hidden">
+
+  <!-- GITHUB CONFIG -->
+  <div class="shadcn-card config-card p-6 mb-6">
+    <div class="flex items-start justify-between mb-5 gap-4 flex-wrap">
+      <div class="flex items-start gap-3">
+        <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-zinc-50 to-zinc-300 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-zinc-950" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 17.07 3.633 16.7 3.633 16.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold tracking-tight">Sauvegarde GitHub</h2>
+          <p class="text-sm text-zinc-400 mt-1">Archive automatiquement la semaine en cours dans un repo GitHub.</p>
+        </div>
+      </div>
+      <span class="badge" id="gh-status">
+        <span class="badge badge-muted" id="gh-status-pill">Non configuré</span>
+      </span>
+    </div>
+
+    <div class="alert mb-5">
+      <strong>Comment ça marche :</strong> chaque clic crée un dossier <span class="mono text-zinc-50">saves/semaine-YYYY-MM-DD/</span> dans ton repo contenant les historiques en JSON + un récapitulatif <span class="mono text-zinc-50">bilan.md</span>. Utilise-le <strong>une fois par semaine</strong>.
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+      <div>
+        <label class="shadcn-label">Username GitHub</label>
+        <input type="text" id="gh-owner" class="shadcn-input" placeholder="mon-username">
+      </div>
+      <div>
+        <label class="shadcn-label">Nom du repo</label>
+        <input type="text" id="gh-repo" class="shadcn-input" placeholder="armurerie-fisk">
+      </div>
+      <div>
+        <label class="shadcn-label">Branche</label>
+        <input type="text" id="gh-branch" class="shadcn-input" placeholder="main" value="main">
+      </div>
+      <div>
+        <label class="shadcn-label">Personal Access Token</label>
+        <input type="password" id="gh-token" class="shadcn-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="flex gap-3 mb-5 flex-wrap">
+      <button class="shadcn-btn shadcn-btn-outline" onclick="saveGithubConfig()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+        Enregistrer la config
+      </button>
+      <button class="shadcn-btn shadcn-btn-outline" onclick="testGithubConnection()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Tester la connexion
+      </button>
+    </div>
+
+    <div class="pt-5 border-t border-zinc-800">
+      <h3 class="text-base font-semibold tracking-tight mb-3">Archiver la semaine</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="shadcn-label">Date de la semaine</label>
+          <input type="date" id="gh-week-date" class="shadcn-input">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="shadcn-label">Message du commit (optionnel)</label>
+          <input type="text" id="gh-commit-msg" class="shadcn-input" placeholder="Sauvegarde semaine 45">
+        </div>
+      </div>
+      <button class="shadcn-btn shadcn-btn-primary" id="gh-push-btn" onclick="pushWeekToGithub()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/></svg>
+        <span id="gh-push-label">Sauvegarder la semaine sur GitHub</span>
+      </button>
+      <p class="text-xs text-zinc-400 mt-3" id="gh-last-push"></p>
+    </div>
+  </div>
+
+  <!-- EXPORT / IMPORT LOCAL -->
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-5">
+      <h2 class="text-xl font-semibold tracking-tight">Sauvegarde locale</h2>
+      <p class="text-sm text-zinc-400 mt-1">Exportez vos données en JSON ou restaurez une sauvegarde précédente.</p>
+    </div>
+    <div class="flex gap-3 flex-wrap items-center">
+      <button class="shadcn-btn shadcn-btn-outline" onclick="exportData()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+        Télécharger la sauvegarde
+      </button>
+      <label class="shadcn-btn shadcn-btn-outline cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>
+        Importer un fichier
+        <input type="file" id="import-file" accept=".json" onchange="importData(event)" class="hidden">
+      </label>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="flex items-start justify-between mb-5 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Gestion des employés</h2>
+        <p class="text-sm text-zinc-400 mt-1">Ajoutez, modifiez et supprimez votre équipe. Les modifications sont sauvegardées automatiquement et archivées sur GitHub lors du push hebdomadaire.</p>
+      </div>
+      <span class="badge badge-muted" id="emp-count-badge">0</span>
+    </div>
+
+    <!-- Add employee form -->
+    <div class="rounded-md border border-zinc-800 bg-zinc-900/50 p-4 mb-5">
+      <h3 class="text-sm font-semibold tracking-tight mb-3 uppercase text-zinc-400">Ajouter un employé</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        <input type="text" id="emp-prenom" class="shadcn-input" placeholder="Prénom">
+        <input type="text" id="emp-nom" class="shadcn-input" placeholder="Nom">
+        <select id="emp-statut" class="shadcn-input">
+          <option>Patron</option>
+          <option>Co-patron</option>
+          <option>Gérant</option>
+          <option selected>Employé</option>
+        </select>
+        <input type="number" id="emp-salaire" class="shadcn-input" placeholder="Salaire" value="300" step="10">
+        <button class="shadcn-btn shadcn-btn-primary" onclick="addEmp()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Ajouter
+        </button>
+      </div>
+    </div>
+
+    <!-- Employee list -->
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <div class="overflow-auto max-h-[500px]">
+        <table class="shadcn-table">
+          <thead>
+            <tr>
+              <th class="w-12">#</th>
+              <th>Prénom</th>
+              <th>Nom</th>
+              <th>Statut</th>
+              <th class="text-right">Salaire</th>
+              <th class="w-32 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="emp-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="shadcn-card danger-card p-6">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="h-10 w-10 rounded-full bg-red-950/40 flex items-center justify-center flex-shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold tracking-tight text-red-200">Zone de danger</h3>
+        <p class="text-sm text-red-300/80 mt-1">Le bouton ci-dessous supprime <strong>toutes les données</strong> (ventes, customs, armes d'occas, impôts, employés). Action <strong>irréversible</strong>. Pensez à exporter une sauvegarde avant.</p>
+      </div>
+    </div>
+    <button class="shadcn-btn shadcn-btn-destructive" onclick="resetAll()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Tout réinitialiser
+    </button>
+  </div>
+
+</section>
+
+</main>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+<script>
+  // Set today's date in header
+  document.getElementById("today-date").textContent = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric"
+  });
+
+  // Manual tab switching that handles Tailwind's hidden class
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.removeAttribute("data-state"));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      btn.setAttribute("data-state", "active");
+      document.getElementById(btn.dataset.tab).classList.remove('hidden');
+    });
+  });
+</script>
+</body>
+</html>

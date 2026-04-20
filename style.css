@@ -431,3 +431,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
   text-underline-offset: 2px;
 }
 .link:hover { opacity: 0.8; }
+
+/* Sync indicator */
+#sync-dot {
+  display: inline-block;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+#sync-dot.state-synced  { background: hsl(var(--success)); box-shadow: 0 0 6px hsl(var(--success) / 0.6); }
+#sync-dot.state-pending { background: #eab308; animation: pulse-dot 1.4s infinite; }
+#sync-dot.state-syncing { background: #3b82f6; animation: pulse-dot 1s infinite; }
+#sync-dot.state-error   { background: hsl(var(--destructive)); }
+#sync-dot.state-offline { background: #71717a; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(1.3); }
+}

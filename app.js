@@ -76,13 +76,18 @@ const EMPLOYES_DEFAULT = [
 ];
 
 // ============================================================
-// STORAGE
+// STORAGE — cache local + sync via Worker
 // ============================================================
 const STORAGE_KEY = "carcanhoes_data_v1";
 const GITHUB_KEY = "carcanhoes_github_v1";
 
 let data = loadData();
 let githubConfig = loadGithubConfig();
+let syncStatus = "offline"; // offline | pending | syncing | synced | error
+let syncMessage = "";
+let saveTimer = null;
+let isApplyingRemoteState = false;  // évite boucle push→pull→push
+let lastRemoteVersion = 0;
 
 function loadData() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -102,6 +107,11 @@ function loadData() {
 
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  schedulePushToWorker();
+}
+
+function saveDataLocalOnly() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function loadGithubConfig() {
@@ -109,12 +119,118 @@ function loadGithubConfig() {
   if (raw) {
     try { return JSON.parse(raw); } catch(e) {}
   }
-  return { owner: "", repo: "", branch: "main", token: "", lastPush: null };
+  return { workerUrl: "", teamPassword: "", userName: "", lastPush: null };
 }
 
 function saveGithubConfigObj() {
   localStorage.setItem(GITHUB_KEY, JSON.stringify(githubConfig));
 }
+
+// ============================================================
+// SYNC STATUS (UI indicator in header)
+// ============================================================
+function setSyncStatus(state, message = "") {
+  syncStatus = state;
+  syncMessage = message;
+  const dot = document.getElementById("sync-dot");
+  const label = document.getElementById("sync-label");
+  if (!dot || !label) return;
+  dot.className = "h-2 w-2 rounded-full state-" + state;
+  const labels = {
+    offline: "Local",
+    pending: "Modif en attente",
+    syncing: "Synchro…",
+    synced:  "Synchronisé",
+    error:   "Erreur sync"
+  };
+  label.textContent = labels[state] || state;
+  label.title = message || "";
+}
+
+// ============================================================
+// WORKER SYNC — état partagé
+// ============================================================
+async function loadStateFromWorker() {
+  if (!githubConfig.workerUrl) return;
+  setSyncStatus("syncing");
+  try {
+    const res = await fetch(`${githubConfig.workerUrl}/state`);
+    const j = await res.json();
+    if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+    isApplyingRemoteState = true;
+    const { meta, ...rest } = j.state;
+    data = { ...data, ...rest };
+    lastRemoteVersion = meta?.version || 0;
+    saveDataLocalOnly();
+    refreshAll();
+    isApplyingRemoteState = false;
+    setSyncStatus("synced", meta?.updatedAt ? `Mis à jour le ${new Date(meta.updatedAt).toLocaleString("fr-FR")} par ${meta.updatedBy}` : "");
+  } catch (e) {
+    setSyncStatus("error", e.message);
+  }
+}
+
+function schedulePushToWorker() {
+  if (isApplyingRemoteState) return;
+  if (!githubConfig.workerUrl || !githubConfig.teamPassword) {
+    setSyncStatus("offline");
+    return;
+  }
+  setSyncStatus("pending");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushStateToWorker, 800);
+}
+
+async function pushStateToWorker() {
+  if (!githubConfig.workerUrl || !githubConfig.teamPassword) {
+    setSyncStatus("offline");
+    return;
+  }
+  setSyncStatus("syncing");
+  try {
+    const res = await fetch(githubConfig.workerUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save",
+        password: githubConfig.teamPassword,
+        user: githubConfig.userName || "inconnu",
+        state: data
+      })
+    });
+    const j = await res.json();
+    if (!res.ok || !j.success) throw new Error(j.error || `HTTP ${res.status}`);
+    lastRemoteVersion = j.version || lastRemoteVersion + 1;
+    setSyncStatus("synced", `Version ${lastRemoteVersion}`);
+  } catch (e) {
+    setSyncStatus("error", e.message);
+    toast("Erreur de synchronisation", e.message, "error", 5000);
+  }
+}
+
+async function refreshFromWorker() {
+  if (!githubConfig.workerUrl) {
+    toast("Non configuré", "Configure d'abord le Worker dans les Paramètres.", "error");
+    return;
+  }
+  await loadStateFromWorker();
+  toast("Données actualisées", "État à jour depuis le serveur.", "success", 2000);
+}
+
+// Auto-refresh toutes les 45s si configuré et onglet visible
+setInterval(() => {
+  if (document.hidden) return;
+  if (!githubConfig.workerUrl || syncStatus === "pending" || syncStatus === "syncing") return;
+  // Poll léger : GET /state et compare version
+  fetch(`${githubConfig.workerUrl}/state`)
+    .then(r => r.json())
+    .then(j => {
+      if (j.ok && j.state?.meta?.version > lastRemoteVersion) {
+        loadStateFromWorker();
+      }
+    })
+    .catch(() => {});
+}, 45000);
 
 // Tab switching handled by inline script in HTML (shadcn-style)
 
@@ -197,8 +313,14 @@ function initUI() {
   document.getElementById("i-capital").value = data.impots.capital || 0;
 
   initGithubUI();
-
   refreshAll();
+
+  // Charge l'état partagé depuis le Worker si configuré
+  if (githubConfig.workerUrl) {
+    loadStateFromWorker();
+  } else {
+    setSyncStatus("offline");
+  }
 }
 
 // ============================================================
@@ -720,24 +842,18 @@ function toast(title, desc, type = "info", duration = 4500) {
 }
 
 // ============================================================
-// GITHUB SYNC
+// GITHUB SYNC via Cloudflare Worker
 // ============================================================
 
-// UTF-8 safe base64 (GitHub API requires base64)
-function b64encode(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
-
 function initGithubUI() {
-  document.getElementById("gh-owner").value  = githubConfig.owner  || "";
-  document.getElementById("gh-repo").value   = githubConfig.repo   || "";
-  document.getElementById("gh-branch").value = githubConfig.branch || "main";
-  document.getElementById("gh-token").value  = githubConfig.token  || "";
+  document.getElementById("wk-url").value      = githubConfig.workerUrl    || "";
+  document.getElementById("wk-password").value = githubConfig.teamPassword || "";
+  document.getElementById("wk-user").value     = githubConfig.userName     || "";
   document.getElementById("gh-week-date").value = today();
   updateGithubStatusPill();
   if (githubConfig.lastPush) {
     document.getElementById("gh-last-push").innerHTML =
-      `Dernier push : <span class="mono">${githubConfig.lastPush.date}</span> → <a class="link" href="${githubConfig.lastPush.url}" target="_blank" rel="noreferrer">voir sur GitHub</a>`;
+      `Dernier push : <span class="mono">${new Date(githubConfig.lastPush.date).toLocaleString("fr-FR")}</span> → <a class="link" href="${githubConfig.lastPush.url}" target="_blank" rel="noreferrer">voir sur GitHub</a>`;
   }
 }
 
@@ -745,7 +861,7 @@ function updateGithubStatusPill() {
   const pill = document.getElementById("gh-status-pill");
   if (!pill) return;
   const cfg = githubConfig;
-  if (cfg.owner && cfg.repo && cfg.token) {
+  if (cfg.workerUrl && cfg.teamPassword) {
     pill.className = "badge badge-success";
     pill.textContent = "Configuré";
   } else {
@@ -755,76 +871,36 @@ function updateGithubStatusPill() {
 }
 
 function saveGithubConfig() {
-  githubConfig.owner  = document.getElementById("gh-owner").value.trim();
-  githubConfig.repo   = document.getElementById("gh-repo").value.trim();
-  githubConfig.branch = document.getElementById("gh-branch").value.trim() || "main";
-  githubConfig.token  = document.getElementById("gh-token").value.trim();
+  const urlBefore = githubConfig.workerUrl;
+  githubConfig.workerUrl    = document.getElementById("wk-url").value.trim().replace(/\/$/, "");
+  githubConfig.teamPassword = document.getElementById("wk-password").value;
+  githubConfig.userName     = document.getElementById("wk-user").value.trim();
   saveGithubConfigObj();
   updateGithubStatusPill();
-  toast("Configuration sauvegardée", "Les informations GitHub sont stockées localement.", "success");
+  toast("Configuration sauvegardée", "Les infos sont stockées dans ton navigateur uniquement.", "success");
+  // Si URL nouvelle ou qu'on vient d'activer, recharger l'état partagé
+  if (githubConfig.workerUrl && githubConfig.workerUrl !== urlBefore) {
+    loadStateFromWorker();
+  }
 }
 
 async function testGithubConnection() {
-  const { owner, repo, branch, token } = githubConfig;
-  if (!owner || !repo || !token) {
-    toast("Configuration incomplète", "Renseigne username, repo et token avant de tester.", "error");
+  const { workerUrl } = githubConfig;
+  if (!workerUrl) {
+    toast("Configuration incomplète", "Renseigne l'URL du Worker avant de tester.", "error");
     return;
   }
   try {
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-    });
-    if (res.ok) {
-      const json = await res.json();
-      toast("Connexion OK", `Repo <span class="mono">${json.full_name}</span> accessible (branche par défaut : <span class="mono">${json.default_branch}</span>).`, "success");
+    const res = await fetch(workerUrl, { method: "GET" });
+    const json = await res.json();
+    if (res.ok && json.ok) {
+      toast("Connexion OK", `Worker actif — cible : <span class="mono">${json.owner}/${json.repo}</span>`, "success");
     } else {
-      const err = await res.json().catch(() => ({}));
-      toast("Échec de la connexion", `${res.status} — ${err.message || "Vérifie tes identifiants."}`, "error");
+      toast("Échec de la connexion", json.error || `Réponse ${res.status}`, "error");
     }
   } catch (err) {
     toast("Erreur réseau", err.message, "error");
   }
-}
-
-async function githubGetFileSha(path) {
-  const { owner, repo, branch, token } = githubConfig;
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-    });
-    if (res.ok) {
-      const json = await res.json();
-      return json.sha;
-    }
-  } catch (e) {}
-  return null;
-}
-
-async function githubPutFile(path, content, message) {
-  const { owner, repo, branch, token } = githubConfig;
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replace(/%2F/g, "/")}`;
-  const sha = await githubGetFileSha(path);
-  const body = {
-    message,
-    content: b64encode(content),
-    branch,
-    ...(sha ? { sha } : {})
-  };
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`${res.status} · ${err.message || "erreur GitHub"}`);
-  }
-  return res.json();
 }
 
 function buildBilanMarkdown(weekDate) {
@@ -876,9 +952,9 @@ function buildBilanMarkdown(weekDate) {
 }
 
 async function pushWeekToGithub() {
-  const { owner, repo, branch, token } = githubConfig;
-  if (!owner || !repo || !token) {
-    toast("Configuration incomplète", "Renseigne username, repo et token avant de pouvoir push.", "error");
+  const { workerUrl, teamPassword, userName } = githubConfig;
+  if (!workerUrl || !teamPassword) {
+    toast("Configuration incomplète", "Renseigne l'URL du Worker et le mot de passe équipe.", "error");
     return;
   }
   const btn = document.getElementById("gh-push-btn");
@@ -888,30 +964,29 @@ async function pushWeekToGithub() {
   label.innerHTML = '<span class="spinner"></span> Envoi en cours…';
 
   try {
+    // S'assure que les dernières modifs sont bien poussées avant l'archive
+    if (saveTimer) { clearTimeout(saveTimer); await pushStateToWorker(); }
+
     const weekDate = document.getElementById("gh-week-date").value || today();
-    const folder = `saves/semaine-${weekDate}`;
     const msg = (document.getElementById("gh-commit-msg").value || `Sauvegarde semaine ${weekDate}`).trim();
 
-    const files = [
-      { path: `${folder}/ventes.json`,    content: JSON.stringify(data.ventes,    null, 2) },
-      { path: `${folder}/customs.json`,   content: JSON.stringify(data.customs,   null, 2) },
-      { path: `${folder}/occas.json`,     content: JSON.stringify(data.occas,     null, 2) },
-      { path: `${folder}/employes.json`,  content: JSON.stringify(data.employes,  null, 2) },
-      { path: `${folder}/impots.json`,    content: JSON.stringify({
-          semaine: data.impots,
-          depensesDeductibles: data.depDed,
-          depensesNonDeductibles: data.depNonDed
-        }, null, 2) },
-      { path: `${folder}/bilan.md`,       content: buildBilanMarkdown(weekDate) }
-    ];
-
-    let lastUrl = null;
-    for (const f of files) {
-      const result = await githubPutFile(f.path, f.content, `${msg} · ${f.path.split("/").pop()}`);
-      if (result?.content?.html_url) lastUrl = result.content.html_url;
+    const res = await fetch(workerUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "archive",
+        password: teamPassword,
+        user: userName || "inconnu",
+        commitMsg: msg,
+        weekDate
+      })
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || `Erreur Worker ${res.status}`);
     }
 
-    const folderUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${folder}`;
+    const folderUrl = json.folderUrl;
     githubConfig.lastPush = { date: new Date().toISOString(), url: folderUrl };
     saveGithubConfigObj();
     document.getElementById("gh-last-push").innerHTML =
@@ -919,11 +994,11 @@ async function pushWeekToGithub() {
 
     toast(
       "Semaine archivée sur GitHub",
-      `Dossier <span class="mono">${folder}</span> créé avec ${files.length} fichiers. <a class="link" href="${folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,
+      `${json.count} fichier(s) commité(s). <a class="link" href="${folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,
       "success", 8000
     );
   } catch (err) {
-    toast("Erreur lors du push", err.message, "error", 8000);
+    toast("Erreur lors de l'archivage", err.message, "error", 8000);
   } finally {
     btn.disabled = false;
     label.textContent = originalLabel;
@@ -963,15 +1038,41 @@ function importData(event) {
   event.target.value = "";
 }
 
-function resetAll() {
-  const c1 = confirm("⚠ ATTENTION ⚠\n\nTu vas supprimer TOUTES les données :\n— toutes les ventes\n— tous les customs\n— toutes les armes d'occas\n— toute la fiche impôts\n— tous les employés\n\nCette action est IRRÉVERSIBLE.\n\nContinuer ?");
+async function resetAll() {
+  const c1 = confirm("⚠ ATTENTION ⚠\n\nTu vas supprimer TOUTES les données PARTAGÉES :\n— toutes les ventes\n— tous les customs\n— toutes les armes d'occas\n— toute la fiche impôts\n— tous les employés\n\nTous les utilisateurs de l'app seront impactés.\nCette action est IRRÉVERSIBLE.\n\nContinuer ?");
   if (!c1) return;
   const c2 = prompt('Pour confirmer, tape : RESET');
-  if (c2 !== "RESET") { alert("Reset annulé."); return; }
+  if (c2 !== "RESET") { toast("Reset annulé", "", "info"); return; }
+
+  // Si Worker configuré, reset côté serveur
+  if (githubConfig.workerUrl && githubConfig.teamPassword) {
+    try {
+      const res = await fetch(githubConfig.workerUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reset",
+          password: githubConfig.teamPassword,
+          user: githubConfig.userName || "inconnu",
+          confirm: "RESET"
+        })
+      });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || `HTTP ${res.status}`);
+    } catch (e) {
+      toast("Erreur reset serveur", e.message, "error");
+      return;
+    }
+  }
+
+  // Reset local
   localStorage.removeItem(STORAGE_KEY);
   data = loadData();
   refreshAll();
-  alert("Toutes les données ont été supprimées.");
+  toast("Données réinitialisées", "Le reset a été propagé à tous les utilisateurs.", "success", 4000);
+
+  // Recharge l'état vide depuis le serveur pour caler la version
+  if (githubConfig.workerUrl) loadStateFromWorker();
 }
 
 // ============================================================

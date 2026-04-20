@@ -1,15 +1,31 @@
 # Carcan'hoes — L'armurerie des Fisk
 
-Application de gestion commerciale pour l'armurerie : ventes, customs, armes d'occasion, fiche impôts hebdomadaire.
+Application de gestion commerciale **multi-utilisateurs** pour l'armurerie. Tout le monde voit le même état (ventes, customs, armes d'occas, employés, impôts) et toute modification est synchronisée en temps réel.
 
-## Structure
+## Architecture
+
+```
+┌─────────────┐     ┌─────────────────────┐     ┌──────────────┐
+│  Navigateur │◄───►│  Cloudflare Worker  │◄───►│    GitHub    │
+│   (HTML/JS) │     │     + KV Storage    │     │   (archive)  │
+└─────────────┘     └─────────────────────┘     └──────────────┘
+     (front)        (backend + état partagé)     (snapshots hebdo)
+```
+
+- **Front** (`armurerie.html`, `style.css`, `app.js`) : interface utilisateur, hébergée sur GitHub Pages.
+- **Backend** (`worker.js`) : Cloudflare Worker, détient le token GitHub, gère l'état partagé via KV, pousse les archives vers GitHub.
+- **Archive** : chaque semaine, `saves/semaine-YYYY-MM-DD/` est créé dans ce repo avec les historiques en JSON + un bilan Markdown.
+
+## Fichiers
 
 ```
 .
-├── armurerie.html       # interface
-├── style.css            # styles (shadcn dark)
-├── app.js               # logique (stockage local + sync GitHub)
-├── saves/               # archives hebdomadaires créées par l'app
+├── armurerie.html           # interface
+├── style.css                # styles (shadcn dark)
+├── app.js                   # logique front + sync Worker
+├── worker.js                # Cloudflare Worker (backend)
+├── CLOUDFLARE_SETUP.md      # guide de déploiement Worker + KV
+├── saves/                   # archives hebdomadaires (créées par le Worker)
 │   └── semaine-YYYY-MM-DD/
 │       ├── ventes.json
 │       ├── customs.json
@@ -20,37 +36,39 @@ Application de gestion commerciale pour l'armurerie : ventes, customs, armes d'o
 └── README.md
 ```
 
-## Utilisation
+## Installation
 
-1. Ouvrir `armurerie.html` dans un navigateur (double-clic).
-2. Les données sont sauvegardées automatiquement dans le `localStorage` du navigateur.
-3. Une fois par semaine, aller dans **Paramètres → Sauvegarde GitHub** et cliquer sur **Sauvegarder la semaine sur GitHub** pour archiver.
+### 1. Backend (une seule fois)
 
-## Configuration GitHub
+Suivre **[CLOUDFLARE_SETUP.md](./CLOUDFLARE_SETUP.md)** : créer le compte Cloudflare, déployer le Worker, binder le KV, configurer les variables (token GitHub, mot de passe équipe).
 
-Dans l'onglet **Paramètres**, renseigner :
+### 2. Front
 
-- **Username GitHub** : ton pseudo GitHub
-- **Nom du repo** : `armurerie-fisk` (ou celui que tu choisis)
-- **Branche** : `main`
-- **Personal Access Token** : token avec scope `repo` (voir section ci-dessous)
+Deux options au choix :
 
-### Créer un Personal Access Token
+**A. Local** : double-clic sur `armurerie.html`
+**B. GitHub Pages** :
+- Repo → Settings → Pages
+- Source : `Deploy from a branch` · Branch : `main` · Folder : `/ (root)`
+- L'app est accessible sur `https://DeVerino-DVR.github.io/armurerie-fisk/armurerie.html`
 
-1. Aller sur https://github.com/settings/tokens
-2. Cliquer **Generate new token (classic)**
-3. Nom : `armurerie-fisk-sync`
-4. Expiration : **No expiration** (ou longue durée)
-5. Cocher le scope **`repo`** (accès complet aux repos privés)
-6. Générer, copier le token (commence par `ghp_…`)
-7. Le coller dans la config de l'app
+### 3. Config utilisateur (chaque employé une fois)
 
-### Notes
+Ouvrir l'app → onglet **Paramètres** → section **Sauvegarde GitHub** :
+- URL du Worker : `https://carcanhoes-sync.xxx.workers.dev`
+- Mot de passe équipe : (celui choisi dans Cloudflare)
+- Ton nom : pour que les commits soient attribués
 
-- Le token est stocké dans le `localStorage` du navigateur (uniquement en local).
-- Le reset de l'app n'efface pas la config GitHub.
-- L'app ne fait que des `PUT` sur l'API GitHub Contents — pas besoin d'installer git localement.
+L'indicateur en haut à droite passe en vert quand la sync est active.
 
-## Hébergement (GitHub Pages)
+## Utilisation quotidienne
 
-Dans les settings du repo : **Pages → Source → Deploy from branch → main / root**. L'app sera accessible sur `https://DeVerino-DVR.github.io/armurerie-fisk/armurerie.html`.
+- Ajouter ventes / customs / armes d'occas → sync auto chez tous
+- Actualiser manuellement avec le bouton **Actualiser** (ou attendre 45s)
+- Une fois par semaine : **Paramètres → Sauvegarder la semaine sur GitHub**
+
+## Sécurité
+
+- Le token GitHub est **uniquement** côté Cloudflare (jamais dans le navigateur)
+- Le mot de passe équipe est stocké localement par chaque utilisateur (localStorage)
+- Pour révoquer un utilisateur : changer le `TEAM_PASSWORD` dans Cloudflare et communiquer le nouveau aux autres

@@ -66,6 +66,84 @@ const OCCAS = {
   "Carabine à répétition":{cat: 60,   rachat: 0,   revente: 0}
 };
 
+// Matières premières suivies dans l'inventaire (ordre d'affichage)
+const MATERIALS = [
+  { id: 'iron',          label: 'Minerai de fer' },
+  { id: 'iron_ingot',    label: 'Lingot de fer' },
+  { id: 'copper_ingot',  label: 'Lingot de cuivre' },
+  { id: 'gold_ingot',    label: "Lingot d'or" },
+  { id: 'wood_plank',    label: 'Planche' },
+  { id: 'small_leather', label: 'Petite pièce de cuir' },
+  { id: 'big_leather',   label: 'Grosse pièce de cuir' },
+  { id: 'cloth',         label: 'Chiffon' },
+  { id: 'clothe_coton',  label: 'Linge de coton' },
+  { id: 'coal',          label: 'Charbon' },
+  { id: 'charcoal_bag',  label: 'Sac de charbon' },
+];
+const MAT_LABEL_TO_ID = Object.fromEntries(MATERIALS.map(m => [m.label, m.id]));
+
+// Recettes : mapping nom du catalogue -> matières consommées par unité produite
+const RECIPES = {
+  // Revolvers
+  "Double Action":             [{item:'iron_ingot',amount:1},{item:'wood_plank',amount:1}],
+  "Cattleman":                 [{item:'iron_ingot',amount:1},{item:'wood_plank',amount:2}],
+  "Navy":                      [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  "Schofield":                 [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  "LeMat":                     [{item:'iron_ingot',amount:2},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  // Pistolets
+  "Mauser":                    [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  "M1899":                     [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  "Volcanic":                  [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  "Pistolet semi-automatique": [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  // Pompes / Fusils
+  "Canon scié":                [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
+  "Double canon":              [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:3},{item:'wood_plank',amount:4}],
+  "Fusil à répétition":        [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
+  "Pompe":                     [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
+  "Pompe semi-auto":           [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
+  "Éléphant":                  [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:4},{item:'gold_ingot',amount:3},{item:'wood_plank',amount:4}],
+  // Carabines
+  "Litchfield":                [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:3},{item:'wood_plank',amount:4}],
+  "Petit gibier":              [{item:'iron_ingot',amount:1},{item:'wood_plank',amount:1}],
+  "Springfield":               [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:4}],
+  "Lancaster":                 [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:3},{item:'wood_plank',amount:4}],
+  "Evans":                     [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:3}],
+  "Verrou":                    [{item:'iron_ingot',amount:5},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
+  "Carabine à répétition":     [{item:'iron_ingot',amount:2},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:3}],
+  // Armes blanches / lancer
+  "Couteaux de chasse":        [{item:'iron',amount:2},{item:'wood_plank',amount:1}],
+  "Lasso":                     [{item:'small_leather',amount:1},{item:'cloth',amount:1}],
+  "Lasso amélioré":            [{item:'clothe_coton',amount:2},{item:'cloth',amount:2},{item:'small_leather',amount:2}],
+  "Machette aguila":           [{item:'iron',amount:4},{item:'small_leather',amount:2}],
+  "Marteau":                   [{item:'iron',amount:4},{item:'small_leather',amount:2}],
+  "Hachette de chasseur":      [{item:'iron',amount:4},{item:'small_leather',amount:2}],
+  "Couteaux de lancer":        [{item:'big_leather',amount:2},{item:'cloth',amount:2}],
+  // Munitions normales
+  "Munitions revolver":              [{item:'iron',amount:2},{item:'coal',amount:2}],
+  "Munitions pistolet":              [{item:'iron',amount:2},{item:'coal',amount:2}],
+  "Munitions petit gibier (fusil)":  [{item:'iron',amount:2},{item:'coal',amount:2}],
+  "Munitions carabine":              [{item:'iron',amount:2},{item:'coal',amount:2}],
+  "Munitions pompe":                 [{item:'iron',amount:2},{item:'coal',amount:2}],
+  "Munitions fusil":                 [{item:'iron',amount:2},{item:'coal',amount:2}],
+  // Munitions spéciales
+  "Revolver Express":        [{item:'iron',amount:2},{item:'charcoal_bag',amount:1}],
+  "Revolver Véloce":         [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Revolver Tête creuse":    [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Carabine Express":        [{item:'iron',amount:2},{item:'charcoal_bag',amount:1}],
+  "Carabine Véloce":         [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Carabine Tête creuse":    [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Fusil Express":           [{item:'iron',amount:2},{item:'charcoal_bag',amount:1}],
+  "Fusil Véloce":            [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Fusil Tête creuse":       [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Pistolet Express":        [{item:'iron',amount:2},{item:'charcoal_bag',amount:1}],
+  "Pistolet Véloce":         [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Pistolet Tête creuse":    [{item:'iron',amount:2},{item:'coal',amount:4}],
+  "Munition éléphant":       [{item:'iron_ingot',amount:1},{item:'copper_ingot',amount:1},{item:'coal',amount:8}],
+  "Pompe Slug":              [{item:'iron',amount:2},{item:'coal',amount:4}],
+  // Divers
+  "Jumelles":                [{item:'iron',amount:2}],
+};
+
 const EMPLOYES_DEFAULT = [
   {prenom:"Dikson",   nom:"Fisk",     statut:"Patron",    salaire:300},
   {prenom:"Nastos",   nom:"Martinez", statut:"Co-patron", salaire:300},
@@ -89,10 +167,19 @@ let saveTimer = null;
 let isApplyingRemoteState = false;  // évite boucle push→pull→push
 let lastRemoteVersion = 0;
 
+function emptyInventory() {
+  return Object.fromEntries(MATERIALS.map(m => [m.id, 0]));
+}
+
 function loadData() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
-    try { return JSON.parse(raw); } catch(e) {}
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed.inventory) parsed.inventory = emptyInventory();
+      MATERIALS.forEach(m => { if (!(m.id in parsed.inventory)) parsed.inventory[m.id] = 0; });
+      return parsed;
+    } catch(e) {}
   }
   return {
     ventes: [],
@@ -101,7 +188,8 @@ function loadData() {
     depDed: [],
     depNonDed: [],
     employes: [...EMPLOYES_DEFAULT],
-    impots: { semaine: "", du: "", au: "", capital: 0 }
+    impots: { semaine: "", du: "", au: "", capital: 0 },
+    inventory: emptyInventory()
   };
 }
 
@@ -160,6 +248,8 @@ async function loadStateFromWorker() {
     isApplyingRemoteState = true;
     const { meta, ...rest } = j.state;
     data = { ...data, ...rest };
+    if (!data.inventory) data.inventory = emptyInventory();
+    MATERIALS.forEach(m => { if (!(m.id in data.inventory)) data.inventory[m.id] = 0; });
     lastRemoteVersion = meta?.version || 0;
     saveDataLocalOnly();
     refreshAll();
@@ -363,6 +453,15 @@ function venteCalc() {
   document.getElementById("v-prix-final").value = final.toFixed(2);
 }
 
+function applyRecipe(nom, qte, sign) {
+  const r = RECIPES[nom];
+  if (!r) return;
+  r.forEach(({item, amount}) => {
+    const delta = amount * qte * sign;
+    data.inventory[item] = Math.max(0, (data.inventory[item] || 0) + delta);
+  });
+}
+
 function addVente() {
   const selArme = document.getElementById("v-arme").value;
   const vendeur = document.getElementById("v-vendeur").value;
@@ -385,6 +484,7 @@ function addVente() {
     reduc,
     final
   });
+  applyRecipe(nom, qte, -1);
   saveData();
   document.getElementById("v-client").value = "";
   document.getElementById("v-serie").value = "";
@@ -392,14 +492,18 @@ function addVente() {
   document.getElementById("v-reduc").value = "0";
   refreshVentes();
   refreshImpots();
+  refreshInventory();
 }
 
 function delVente(id) {
   if (!confirm("Supprimer cette vente ?")) return;
+  const v = data.ventes.find(x => x.id === id);
+  if (v) applyRecipe(v.arme, v.qte || 1, +1);
   data.ventes = data.ventes.filter(v => v.id !== id);
   saveData();
   refreshVentes();
   refreshImpots();
+  refreshInventory();
 }
 
 function refreshVentes() {
@@ -619,18 +723,33 @@ function addDepDed() {
   const date = document.getElementById("dd-date").value;
   const lib = document.getElementById("dd-lib").value;
   const mnt = Number(document.getElementById("dd-mnt").value);
+  const qte = Number(document.getElementById("dd-qte").value) || 0;
   if (!lib || !mnt) { alert("Remplir libellé et montant"); return; }
-  data.depDed.push({id:Date.now(), date, lib, mnt});
+  const rec = {id:Date.now(), date, lib, mnt};
+  const matId = MAT_LABEL_TO_ID[lib];
+  if (matId && qte > 0) {
+    rec.matItem = matId;
+    rec.matQty = qte;
+    data.inventory[matId] = (data.inventory[matId] || 0) + qte;
+  }
+  data.depDed.push(rec);
   saveData();
   document.getElementById("dd-lib").value = "";
   document.getElementById("dd-mnt").value = "";
+  document.getElementById("dd-qte").value = "";
   refreshImpots();
+  refreshInventory();
 }
 
 function delDepDed(id) {
+  const d = data.depDed.find(x => x.id === id);
+  if (d && d.matItem && d.matQty) {
+    data.inventory[d.matItem] = Math.max(0, (data.inventory[d.matItem] || 0) - d.matQty);
+  }
   data.depDed = data.depDed.filter(d => d.id !== id);
   saveData();
   refreshImpots();
+  refreshInventory();
 }
 
 function addDepNonDed() {
@@ -662,7 +781,7 @@ function updateSalaire(idx, field, val) {
 function refreshImpots() {
   const dd = document.getElementById("dd-table");
   dd.innerHTML = data.depDed.map(d => `
-    <tr><td>${d.date||""}</td><td>${d.lib}</td><td>${fmt(d.mnt)}</td>
+    <tr><td>${d.date||""}</td><td>${d.lib}</td><td>${d.matQty||""}</td><td>${fmt(d.mnt)}</td>
     <td><button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delDepDed(${d.id})">✕</button></td></tr>
   `).join("");
   const totalDD = data.depDed.reduce((s,d) => s + (d.mnt||0), 0);
@@ -1098,12 +1217,112 @@ async function resetAll() {
 // ============================================================
 // REFRESH ALL
 // ============================================================
+const PRIX_CATEGORIES = ["Revolvers", "Pistolets", "Pompes / Fusils de chasse", "Carabines"];
+
+// Surcharges quand le fichier image ne correspond pas au slug auto
+const ARME_IMAGE_OVERRIDE = {
+  "Pistolet semi-automatique": "pistol-semi-auto",
+  "Double canon":              "double-barrel",
+  "Fusil à répétition":        "pompe-repetition",
+  "Verrou":                    "fusil-a-verrou",
+  "Carabine à répétition":     "carabine-repetition",
+};
+
+function armeSlug(nom) {
+  if (ARME_IMAGE_OVERRIDE[nom]) return ARME_IMAGE_OVERRIDE[nom];
+  return nom.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function renderPrix() {
+  const container = document.getElementById("prix-container");
+  if (!container) return;
+  container.innerHTML = PRIX_CATEGORIES.map(cat => {
+    const items = CATALOGUE[cat];
+    if (!items) return "";
+    const rows = Object.entries(items).map(([nom, prix]) => {
+      const slug = armeSlug(nom);
+      return `<tr>
+        <td style="width:110px">
+          <img src="images/armes/${slug}.png" alt="${nom}"
+               style="width:90px;height:48px;object-fit:contain;display:block"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div style="width:90px;height:48px;display:none;align-items:center;justify-content:center;border:1px dashed hsl(var(--border));border-radius:6px;color:hsl(var(--muted-foreground));font-size:0.7rem">—</div>
+        </td>
+        <td><b>${nom}</b></td>
+        <td style="text-align:right" class="mono">${fmt(prix)}</td>
+        <td style="text-align:right" class="mono" style="color:#fbbf24">${fmt(prix * 0.95)}</td>
+        <td style="text-align:right" class="mono" style="color:#34d399">${fmt(prix * 0.90)}</td>
+      </tr>`;
+    }).join("");
+    return `
+      <div class="shadcn-card p-6">
+        <h2 class="text-xl font-semibold tracking-tight mb-4">${cat}</h2>
+        <div class="overflow-hidden rounded-md border border-zinc-800">
+          <table class="shadcn-table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Nom</th>
+                <th style="text-align:right">Prix catalogue</th>
+                <th style="text-align:right">-5%</th>
+                <th style="text-align:right">-10%</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function refreshInventory() {
+  const tbody = document.getElementById("inv-table");
+  if (!tbody) return;
+  tbody.innerHTML = MATERIALS.map(m => {
+    const qty = data.inventory[m.id] || 0;
+    return `<tr>
+      <td>${m.label}</td>
+      <td style="text-align:center${qty < 50 ? ';color:#ef4444' : ''}" class="mono"><b>${qty}</b></td>
+      <td>
+        <div class="flex gap-1 justify-center">
+          <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm" onclick="invAdjust('${m.id}', -1)">−1</button>
+          <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm" onclick="invAdjust('${m.id}', 1)">+1</button>
+          <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm" onclick="invSet('${m.id}')">Définir</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function invAdjust(item, delta) {
+  data.inventory[item] = Math.max(0, (data.inventory[item] || 0) + delta);
+  saveData();
+  refreshInventory();
+}
+
+function invSet(item) {
+  const current = data.inventory[item] || 0;
+  const v = prompt(`Nouvelle quantité pour ${item} :`, current);
+  if (v === null) return;
+  const n = Number(v);
+  if (Number.isNaN(n) || n < 0) { alert("Valeur invalide"); return; }
+  data.inventory[item] = Math.floor(n);
+  saveData();
+  refreshInventory();
+}
+
 function refreshAll() {
   refreshVentes();
   refreshCustoms();
   refreshOccas();
   refreshImpots();
   refreshEmp();
+  refreshInventory();
+  renderPrix();
 }
 
 // ============================================================

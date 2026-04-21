@@ -1,0 +1,32 @@
+[
+  {
+    "prenom": "Dikson",
+    "nom": "Fisk",
+    "statut": "Patron",
+    "salaire": 300
+  },
+  {
+    "prenom": "Etienne",
+    "nom": "Lefebvre",
+    "statut": "Patron",
+    "salaire": 300
+  },
+  {
+    "prenom": "Colette",
+    "nom": "Mcwilly",
+    "statut": "Co-patron",
+    "salaire": 300
+  },
+  {
+    "prenom": "Julien",
+    "nom": "Lefebvre",
+    "statut": "Gérant",
+    "salaire": 300
+  },
+  {
+    "prenom": "Jasper",
+    "nom": "Flint",
+    "statut": "Employé",
+    "salaire": 300
+  }
+]

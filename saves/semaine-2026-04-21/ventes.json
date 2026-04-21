@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1776790278509,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Floyd Rawlings",
+    "serie": "",
+    "arme": "Munitions pompe",
+    "qte": 1,
+    "prix": 4,
+    "reduc": 0,
+    "final": 4
+  },
+  {
+    "id": 1776793311358,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Andres Ibarra",
+    "serie": "1776793048-9569",
+    "arme": "Canon scié",
+    "qte": 1,
+    "prix": 45,
+    "reduc": 0,
+    "final": 45
+  },
+  {
+    "id": 1776800097898,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Jackson Dallas",
+    "serie": "1776799952-4506",
+    "arme": "Schofield",
+    "qte": 1,
+    "prix": 55,
+    "reduc": 0,
+    "final": 55
+  },
+  {
+    "id": 1776800686794,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Anas Slihimi",
+    "serie": "1776800358-5103",
+    "arme": "Schofield",
+    "qte": 1,
+    "prix": 55,
+    "reduc": 0,
+    "final": 55
+  },
+  {
+    "id": 1776800721491,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Anas Slihimi",
+    "serie": "",
+    "arme": "Munitions revolver",
+    "qte": 2,
+    "prix": 6,
+    "reduc": 0,
+    "final": 6
+  },
+  {
+    "id": 1776805892089,
+    "date": "2026-04-21",
+    "vendeur": "Jasper Flint",
+    "client": "gaspard meuilleur",
+    "serie": "1776805345-8093",
+    "arme": "Ceinture de bolas",
+    "qte": 1,
+    "prix": 8,
+    "reduc": 0,
+    "final": 8
+  },
+  {
+    "id": 1776806825066,
+    "date": "2026-04-21",
+    "vendeur": "Jasper Flint",
+    "client": "maelore veonshire",
+    "serie": "1776806215-9477",
+    "arme": "Litchfield",
+    "qte": 1,
+    "prix": 115,
+    "reduc": 0,
+    "final": 115
+  }
+]

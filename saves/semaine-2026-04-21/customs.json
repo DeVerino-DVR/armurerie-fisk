@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1776725622396,
+    "date": "2026-04-20",
+    "vendeur": "Colette Mcwilly",
+    "client": "Vin Carson",
+    "arme": "Fusil à répétition",
+    "cout": 43.75,
+    "final": 54.6875,
+    "part": 10.9375,
+    "reduc": 0,
+    "info": ""
+  },
+  {
+    "id": 1776807033849,
+    "date": "2026-04-21",
+    "vendeur": "Jasper Flint",
+    "client": "maelore veonshire",
+    "arme": "Litchfield",
+    "cout": 15,
+    "final": 18.75,
+    "part": 3.75,
+    "reduc": 0,
+    "info": ""
+  }
+]

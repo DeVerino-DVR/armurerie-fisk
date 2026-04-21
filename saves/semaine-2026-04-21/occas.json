@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1776800204608,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Jackson Dallas",
+    "arme": "M1899",
+    "serie": "1758485333-1628",
+    "tauxReprise": 50,
+    "prixReprise": 27.5,
+    "prixRevente": 46.75,
+    "vendue": true,
+    "info": "ras"
+  },
+  {
+    "id": 1776800656094,
+    "date": "2026-04-21",
+    "vendeur": "Colette Mcwilly",
+    "client": "Jackson Dallas",
+    "arme": "M1899",
+    "serie": "1762087326-8417",
+    "tauxReprise": 50,
+    "prixReprise": 27.5,
+    "prixRevente": 46.75,
+    "vendue": false,
+    "info": "ras"
+  }
+]

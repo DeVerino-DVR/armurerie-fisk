@@ -240,6 +240,23 @@ setInterval(() => {
 function fmt(n) { return "$" + Number(n||0).toFixed(2); }
 function today() { return new Date().toISOString().slice(0,10); }
 
+function isoWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function currentWeekRange() {
+  const d = new Date();
+  const day = d.getDay() || 7;
+  const monday = new Date(d); monday.setDate(d.getDate() - day + 1);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const iso = dt => dt.toISOString().slice(0,10);
+  return { semaine: isoWeek(d), du: iso(monday), au: iso(sunday) };
+}
+
 function fillSelect(sel, options, placeholder) {
   sel.innerHTML = "";
   if (placeholder) {
@@ -307,9 +324,13 @@ function initUI() {
   fillSelect(document.getElementById("v-arme"), armesVenteOptions(), "-- Choisir une arme --");
   fillSelect(document.getElementById("o-arme"), [{group:"Armes reprises", items: armesOccasOptions()}], "-- Choisir une arme --");
 
-  if (data.impots.semaine) document.getElementById("i-semaine").value = data.impots.semaine;
-  if (data.impots.du) document.getElementById("i-du").value = data.impots.du;
-  if (data.impots.au) document.getElementById("i-au").value = data.impots.au;
+  const wk = currentWeekRange();
+  document.getElementById("i-semaine").value = wk.semaine;
+  document.getElementById("i-du").value = wk.du;
+  document.getElementById("i-au").value = wk.au;
+  data.impots.semaine = wk.semaine;
+  data.impots.du = wk.du;
+  data.impots.au = wk.au;
   document.getElementById("i-capital").value = data.impots.capital || 0;
 
   initGithubUI();

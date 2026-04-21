@@ -24,6 +24,16 @@
 
 * { box-sizing: border-box; }
 
+/* Pleine largeur avec marge latérale modérée */
+header > div,
+nav > div,
+main {
+  max-width: none !important;
+  width: 100%;
+  padding-left: 4rem !important;
+  padding-right: 4rem !important;
+}
+
 html { font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
 
 body {
@@ -166,7 +176,8 @@ textarea.shadcn-input { height: auto; min-height: 80px; }
 .shadcn-btn-ghost:hover { background: hsl(var(--muted) / 0.5); }
 
 .shadcn-btn-sm { height: 2rem; padding: 0 0.75rem; font-size: 0.8125rem; }
-.shadcn-btn-icon { width: 2rem; height: 2rem; padding: 0; }
+.shadcn-btn-icon { width: 2.5rem; height: 2.5rem; padding: 0; }
+.shadcn-btn-sm.shadcn-btn-icon { width: 2rem; height: 2rem; }
 
 /* Card */
 .shadcn-card {

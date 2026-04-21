@@ -1,0 +1,23 @@
+{
+  "semaine": {
+    "semaine": "17",
+    "du": "2026-04-20",
+    "au": "2026-04-26",
+    "capital": 200
+  },
+  "depensesDeductibles": [
+    {
+      "id": 1776728589552,
+      "date": "2026-04-20",
+      "lib": "Planche",
+      "mnt": 33
+    },
+    {
+      "id": 1776730483084,
+      "date": "2026-04-20",
+      "lib": "Pièces de cuir ",
+      "mnt": 40
+    }
+  ],
+  "depensesNonDeductibles": []
+}

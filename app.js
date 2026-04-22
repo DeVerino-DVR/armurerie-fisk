@@ -824,6 +824,61 @@ function delOccas(id) {
   refreshImpots();
 }
 
+// Modal "Arme perso" — ajoute une arme au stock d'occasion sans qu'elle compte comme reprise
+function showPersoModal() {
+  const modal = document.getElementById("perso-modal");
+  const armeSel = document.getElementById("perso-arme");
+  armeSel.innerHTML = '<option value="">-- Choisir une arme --</option>' +
+    Object.entries(OCCAS).map(([nom, p]) =>
+      `<option value='${JSON.stringify({nom, cat: p.cat})}'>${nom} (neuf ${fmt(p.cat)})</option>`
+    ).join("");
+  fillSelect(document.getElementById("perso-vendeur"), employesList(), "-- Armurier --");
+  document.getElementById("perso-serie").value = "";
+  document.getElementById("perso-prix-revente").value = "";
+  document.getElementById("perso-info").value = "";
+  modal.classList.remove("hidden");
+}
+
+function hidePersoModal() {
+  document.getElementById("perso-modal").classList.add("hidden");
+}
+
+function onPersoArmeChange() {
+  const val = document.getElementById("perso-arme").value;
+  if (!val) return;
+  try {
+    const {cat} = JSON.parse(val);
+    document.getElementById("perso-prix-revente").value = (cat * 0.85).toFixed(2);
+  } catch(e) {}
+}
+
+function submitPerso() {
+  const selArme = document.getElementById("perso-arme").value;
+  if (!selArme) { toast("Erreur", "Choisis une arme.", "error"); return; }
+  const {nom} = JSON.parse(selArme);
+  const prixRevente = Number(document.getElementById("perso-prix-revente").value) || 0;
+  if (prixRevente <= 0) { toast("Erreur", "Renseigne un prix de revente.", "error"); return; }
+  data.occas.push({
+    id: Date.now(),
+    date: today(),
+    vendeur: document.getElementById("perso-vendeur").value || "",
+    client: "(perso)",
+    arme: nom,
+    serie: document.getElementById("perso-serie").value,
+    tauxReprise: 0,
+    prixReprise: 0,
+    prixRevente,
+    vendue: false,
+    info: document.getElementById("perso-info").value,
+    personnelle: true
+  });
+  saveData();
+  hidePersoModal();
+  refreshOccas();
+  refreshImpots();
+  toast("Arme perso ajoutée", `${nom} ajoutée au stock (prix reprise = $0).`, "success", 2500);
+}
+
 function refreshOccas() {
   const tbody = document.getElementById("o-table");
   const hideSold = document.getElementById("o-hide-sold").checked;
@@ -835,7 +890,7 @@ function refreshOccas() {
       <td>${o.date||""}</td>
       <td>${o.vendeur||""}</td>
       <td>${o.client||""}</td>
-      <td>${o.arme||""}</td>
+      <td>${o.arme||""}${o.personnelle ? ' <span class="badge badge-muted">Perso</span>' : ''}</td>
       <td>${o.serie||""}</td>
       <td>${o.tauxReprise||50}%</td>
       <td>${fmt(o.prixReprise)}</td>

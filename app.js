@@ -144,9 +144,12 @@ const RECIPES = {
   "Jumelles":                [{item:'iron',amount:2}],
 };
 
+const ADMIN_ROLES = ["Patron", "Co-patron"];
+const DEFAULT_ADMIN_PIN = "0826";
+
 const EMPLOYES_DEFAULT = [
-  {prenom:"Dikson",   nom:"Fisk",     statut:"Patron",    salaire:300},
-  {prenom:"Nastos",   nom:"Martinez", statut:"Co-patron", salaire:300},
+  {prenom:"Dikson",   nom:"Fisk",     statut:"Patron",    salaire:300, pin:DEFAULT_ADMIN_PIN},
+  {prenom:"Nastos",   nom:"Martinez", statut:"Co-patron", salaire:300, pin:DEFAULT_ADMIN_PIN},
   {prenom:"William",  nom:"Stilwell", statut:"Gérant",    salaire:300},
   {prenom:"Wyatt",    nom:"Earp",     statut:"Employé",   salaire:300},
   {prenom:"Butch",    nom:"Harison",  statut:"Employé",   salaire:300},
@@ -158,9 +161,11 @@ const EMPLOYES_DEFAULT = [
 // ============================================================
 const STORAGE_KEY = "carcanhoes_data_v1";
 const GITHUB_KEY = "carcanhoes_github_v1";
+const USER_KEY = "carcanhoes_user_v1";
 
 let data = loadData();
 let githubConfig = loadGithubConfig();
+let currentUser = null;
 let syncStatus = "offline"; // offline | pending | syncing | synced | error
 let syncMessage = "";
 let saveTimer = null;
@@ -178,6 +183,11 @@ function loadData() {
       const parsed = JSON.parse(raw);
       if (!parsed.inventory) parsed.inventory = emptyInventory();
       MATERIALS.forEach(m => { if (!(m.id in parsed.inventory)) parsed.inventory[m.id] = 0; });
+      if (Array.isArray(parsed.employes)) {
+        parsed.employes.forEach(e => {
+          if (ADMIN_ROLES.includes(e.statut) && !e.pin) e.pin = DEFAULT_ADMIN_PIN;
+        });
+      }
       return parsed;
     } catch(e) {}
   }
@@ -398,6 +408,134 @@ function armesOccasOptions() {
 }
 
 // ============================================================
+// AUTH / PERMISSIONS
+// ============================================================
+function isAdmin() {
+  return !!currentUser && ADMIN_ROLES.includes(currentUser.statut);
+}
+
+function requireAdmin() {
+  if (!isAdmin()) {
+    toast("Action réservée", "Seuls le Patron et le Co-patron peuvent effectuer cette action.", "error", 3500);
+    return false;
+  }
+  return true;
+}
+
+function loadCurrentUser() {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    const u = JSON.parse(raw);
+    const match = data.employes.find(e => e.prenom === u.prenom && e.nom === u.nom);
+    if (!match || match.statut !== u.statut) return null;
+    return { prenom: match.prenom, nom: match.nom, statut: match.statut };
+  } catch(e) { return null; }
+}
+
+function persistCurrentUser() {
+  if (currentUser) localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+  else localStorage.removeItem(USER_KEY);
+}
+
+function logout() {
+  currentUser = null;
+  persistCurrentUser();
+  refreshUserChip();
+  applyAdminLock();
+  showLoginModal();
+}
+
+function refreshUserChip() {
+  const chip = document.getElementById("user-chip");
+  if (!chip) return;
+  if (!currentUser) {
+    chip.classList.add("hidden");
+    return;
+  }
+  chip.classList.remove("hidden");
+  document.getElementById("user-chip-label").textContent = `${currentUser.prenom} ${currentUser.nom}`;
+  const role = document.getElementById("user-chip-role");
+  role.textContent = currentUser.statut;
+  role.className = "badge " + (isAdmin() ? "badge-success" : "badge-muted");
+}
+
+function applyAdminLock() {
+  const admin = isAdmin();
+  document.querySelectorAll("[data-admin-only]").forEach(el => {
+    if (admin) {
+      el.disabled = false;
+      el.removeAttribute("title");
+      el.classList.remove("is-locked");
+    } else {
+      el.disabled = true;
+      el.setAttribute("title", "Réservé au Patron / Co-patron");
+      el.classList.add("is-locked");
+    }
+  });
+}
+
+function showLoginModal() {
+  const modal = document.getElementById("login-modal");
+  if (!modal) return;
+  const select = document.getElementById("login-employe");
+  select.innerHTML = '<option value="">-- Choisir --</option>' + data.employes.map((e, i) =>
+    `<option value="${i}">${e.prenom} ${e.nom} — ${e.statut}</option>`
+  ).join("");
+  document.getElementById("login-pin").value = "";
+  document.getElementById("login-pin-row").classList.add("hidden");
+  document.getElementById("login-error").textContent = "";
+  modal.classList.remove("hidden");
+  setTimeout(() => select.focus(), 30);
+}
+
+function hideLoginModal() {
+  const modal = document.getElementById("login-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function onLoginEmployeChange() {
+  const val = document.getElementById("login-employe").value;
+  const row = document.getElementById("login-pin-row");
+  document.getElementById("login-error").textContent = "";
+  if (val === "" || !data.employes[val]) {
+    row.classList.add("hidden");
+    return;
+  }
+  const e = data.employes[val];
+  if (ADMIN_ROLES.includes(e.statut)) {
+    row.classList.remove("hidden");
+    document.getElementById("login-pin").value = "";
+    setTimeout(() => document.getElementById("login-pin").focus(), 30);
+  } else {
+    row.classList.add("hidden");
+  }
+}
+
+function submitLogin() {
+  const val = document.getElementById("login-employe").value;
+  const errEl = document.getElementById("login-error");
+  if (val === "" || !data.employes[val]) {
+    errEl.textContent = "Choisis ton profil.";
+    return;
+  }
+  const e = data.employes[val];
+  if (ADMIN_ROLES.includes(e.statut)) {
+    const pin = document.getElementById("login-pin").value;
+    if (pin !== (e.pin || DEFAULT_ADMIN_PIN)) {
+      errEl.textContent = "Code PIN incorrect.";
+      return;
+    }
+  }
+  currentUser = { prenom: e.prenom, nom: e.nom, statut: e.statut };
+  persistCurrentUser();
+  hideLoginModal();
+  refreshUserChip();
+  applyAdminLock();
+  toast("Connexion réussie", `Bienvenue ${currentUser.prenom} — ${currentUser.statut}`, "success", 2500);
+}
+
+// ============================================================
 // INIT UI
 // ============================================================
 function initUI() {
@@ -474,7 +612,7 @@ function addVente() {
   const final = brut * (1 - reduc/100);
   data.ventes.push({
     id: Date.now(),
-    date: document.getElementById("v-date").value,
+    date: today(),
     vendeur,
     client: document.getElementById("v-client").value,
     serie: document.getElementById("v-serie").value,
@@ -486,6 +624,7 @@ function addVente() {
   });
   applyRecipe(nom, qte, -1);
   saveData();
+  document.getElementById("v-date").value = today();
   document.getElementById("v-client").value = "";
   document.getElementById("v-serie").value = "";
   document.getElementById("v-qte").value = "1";
@@ -496,6 +635,7 @@ function addVente() {
 }
 
 function delVente(id) {
+  if (!requireAdmin()) return;
   if (!confirm("Supprimer cette vente ?")) return;
   const v = data.ventes.find(x => x.id === id);
   if (v) applyRecipe(v.arme, v.qte || 1, +1);
@@ -527,12 +667,13 @@ function refreshVentes() {
       <td>${fmt(v.prix)}</td>
       <td>${v.reduc||0}%</td>
       <td><b>${fmt(v.final)}</b></td>
-      <td class="actions-cell"><button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delVente(${v.id})">✕</button></td>
+      <td class="actions-cell"><button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delVente(${v.id})">✕</button></td>
     </tr>
   `).join("");
   const total = data.ventes.reduce((s,v) => s + (v.final||0), 0);
   document.getElementById("v-total").textContent = fmt(total);
   document.getElementById("v-count").textContent = String(data.ventes.length);
+  applyAdminLock();
 }
 
 // ============================================================
@@ -558,7 +699,7 @@ function addCustom() {
   const partFinal = part * (1 - reduc/100);
   data.customs.push({
     id: Date.now(),
-    date: document.getElementById("c-date").value,
+    date: today(),
     vendeur,
     client: document.getElementById("c-client").value,
     arme: document.getElementById("c-arme").value,
@@ -569,6 +710,7 @@ function addCustom() {
     info: document.getElementById("c-info").value
   });
   saveData();
+  document.getElementById("c-date").value = today();
   document.getElementById("c-client").value = "";
   document.getElementById("c-arme").value = "";
   document.getElementById("c-cout").value = "";
@@ -580,6 +722,7 @@ function addCustom() {
 }
 
 function delCustom(id) {
+  if (!requireAdmin()) return;
   if (!confirm("Supprimer ce custom ?")) return;
   data.customs = data.customs.filter(c => c.id !== id);
   saveData();
@@ -607,7 +750,7 @@ function refreshCustoms() {
       <td style="color:#2d5a3d"><b>${fmt(c.part)}</b></td>
       <td>${c.reduc||0}%</td>
       <td>${c.info||""}</td>
-      <td class="actions-cell"><button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delCustom(${c.id})">✕</button></td>
+      <td class="actions-cell"><button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delCustom(${c.id})">✕</button></td>
     </tr>
   `).join("");
   const totalFinal = data.customs.reduce((s,c) => s + (c.final||0), 0);
@@ -615,6 +758,7 @@ function refreshCustoms() {
   document.getElementById("c-total").textContent = fmt(totalFinal);
   document.getElementById("c-total-part").textContent = fmt(totalPart);
   document.getElementById("c-count").textContent = String(data.customs.length);
+  applyAdminLock();
 }
 
 // ============================================================
@@ -642,7 +786,7 @@ function addOccas() {
   const taux = Number(document.getElementById("o-taux").value) || 50;
   data.occas.push({
     id: Date.now(),
-    date: document.getElementById("o-date").value,
+    date: today(),
     vendeur,
     client: document.getElementById("o-client").value,
     arme: nom,
@@ -654,6 +798,7 @@ function addOccas() {
     info: document.getElementById("o-info").value
   });
   saveData();
+  document.getElementById("o-date").value = today();
   document.getElementById("o-client").value = "";
   document.getElementById("o-serie").value = "";
   document.getElementById("o-info").value = "";
@@ -671,6 +816,7 @@ function toggleOccasVendue(id) {
 }
 
 function delOccas(id) {
+  if (!requireAdmin()) return;
   if (!confirm("Supprimer cette arme d'occasion ?")) return;
   data.occas = data.occas.filter(o => o.id !== id);
   saveData();
@@ -696,7 +842,7 @@ function refreshOccas() {
       <td><b>${fmt(o.prixRevente)}</b></td>
       <td><input type="checkbox" ${o.vendue?'checked':''} onchange="toggleOccasVendue(${o.id})"></td>
       <td>${o.info||""}</td>
-      <td class="actions-cell"><button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delOccas(${o.id})">✕</button></td>
+      <td class="actions-cell"><button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delOccas(${o.id})">✕</button></td>
     </tr>
   `).join("");
   const stock = data.occas.filter(o => !o.vendue);
@@ -704,6 +850,7 @@ function refreshOccas() {
   document.getElementById("o-stock-cout").textContent = fmt(stock.reduce((s,o) => s + (o.prixReprise||0), 0));
   document.getElementById("o-stock-revente").textContent = fmt(stock.reduce((s,o) => s + (o.prixRevente||0), 0));
   document.getElementById("o-count").textContent = String(data.occas.length);
+  applyAdminLock();
 }
 
 // ============================================================
@@ -771,6 +918,7 @@ function delDepNonDed(id) {
 }
 
 function updateSalaire(idx, field, val) {
+  if (!requireAdmin()) { refreshImpots(); return; }
   if (field === "heures") data.employes[idx].heures = Number(val)||0;
   else if (field === "salaire") data.employes[idx].salaire = Number(val)||0;
   else if (field === "prime") data.employes[idx].prime = Number(val)||0;
@@ -803,9 +951,9 @@ function refreshImpots() {
       <td>${i+1}</td>
       <td>${e.prenom} ${e.nom}</td>
       <td>${e.statut}</td>
-      <td><input type="number" value="${e.heures||''}" onchange="updateSalaire(${i},'heures',this.value)" style="width:60px"></td>
-      <td><input type="number" value="${s}" onchange="updateSalaire(${i},'salaire',this.value)" style="width:80px"></td>
-      <td><input type="number" value="${p}" onchange="updateSalaire(${i},'prime',this.value)" style="width:80px"></td>
+      <td><input data-admin-only type="number" value="${e.heures||''}" onchange="updateSalaire(${i},'heures',this.value)" style="width:60px"></td>
+      <td><input data-admin-only type="number" value="${s}" onchange="updateSalaire(${i},'salaire',this.value)" style="width:80px"></td>
+      <td><input data-admin-only type="number" value="${p}" onchange="updateSalaire(${i},'prime',this.value)" style="width:80px"></td>
       <td><b>${fmt(s+p)}</b></td>
     </tr>`;
   }).join("");
@@ -832,18 +980,22 @@ function refreshImpots() {
   document.getElementById("r-dep-nonded").textContent = neg(totalDND);
   document.getElementById("r-bilan").textContent = fmt(bilan);
   document.getElementById("r-capital-fin").textContent = fmt(capitalFin);
+  applyAdminLock();
 }
 
 // ============================================================
 // EMPLOYES
 // ============================================================
 function addEmp() {
+  if (!requireAdmin()) return;
   const prenom = document.getElementById("emp-prenom").value.trim();
   const nom = document.getElementById("emp-nom").value.trim();
   const statut = document.getElementById("emp-statut").value;
   const salaire = Number(document.getElementById("emp-salaire").value) || 0;
   if (!prenom || !nom) { toast("Erreur", "Prénom et nom requis.", "error"); return; }
-  data.employes.push({prenom, nom, statut, salaire});
+  const emp = {prenom, nom, statut, salaire};
+  if (ADMIN_ROLES.includes(statut)) emp.pin = DEFAULT_ADMIN_PIN;
+  data.employes.push(emp);
   saveData();
   document.getElementById("emp-prenom").value = "";
   document.getElementById("emp-nom").value = "";
@@ -855,6 +1007,7 @@ function addEmp() {
 }
 
 function delEmp(idx) {
+  if (!requireAdmin()) return;
   if (!confirm(`Supprimer ${data.employes[idx].prenom} ${data.employes[idx].nom} ?`)) return;
   data.employes.splice(idx, 1);
   saveData();
@@ -873,6 +1026,7 @@ function refreshVendeurSelects() {
 let editingEmpIdx = -1;
 
 function startEditEmp(idx) {
+  if (!requireAdmin()) return;
   editingEmpIdx = idx;
   refreshEmp();
 }
@@ -883,12 +1037,15 @@ function cancelEditEmp() {
 }
 
 function saveEditEmp(idx) {
+  if (!requireAdmin()) return;
   const prenom = document.getElementById(`emp-edit-prenom-${idx}`).value.trim();
   const nom = document.getElementById(`emp-edit-nom-${idx}`).value.trim();
   const statut = document.getElementById(`emp-edit-statut-${idx}`).value;
   const salaire = Number(document.getElementById(`emp-edit-salaire-${idx}`).value) || 0;
   if (!prenom || !nom) { toast("Erreur", "Prénom et nom requis.", "error"); return; }
-  data.employes[idx] = { ...data.employes[idx], prenom, nom, statut, salaire };
+  const updated = { ...data.employes[idx], prenom, nom, statut, salaire };
+  if (ADMIN_ROLES.includes(statut) && !updated.pin) updated.pin = DEFAULT_ADMIN_PIN;
+  data.employes[idx] = updated;
   saveData();
   editingEmpIdx = -1;
   refreshEmp();
@@ -941,10 +1098,10 @@ function refreshEmp() {
         <td class="text-right mono">${fmt(e.salaire)}</td>
         <td class="text-right">
           <div class="inline-flex gap-1">
-            <button class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon" onclick="startEditEmp(${i})" title="Modifier">
+            <button data-admin-only class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon" onclick="startEditEmp(${i})" title="Modifier">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </button>
-            <button class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon text-red-400 hover:bg-red-950/30" onclick="delEmp(${i})" title="Supprimer">
+            <button data-admin-only class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon text-red-400 hover:bg-red-950/30" onclick="delEmp(${i})" title="Supprimer">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
           </div>
@@ -952,6 +1109,7 @@ function refreshEmp() {
       </tr>
     `;
   }).join("");
+  applyAdminLock();
 }
 
 // ============================================================
@@ -1010,6 +1168,7 @@ function updateGithubStatusPill() {
 }
 
 function saveGithubConfig() {
+  if (!requireAdmin()) return;
   const urlBefore = githubConfig.workerUrl;
   githubConfig.workerUrl    = document.getElementById("wk-url").value.trim().replace(/\/$/, "");
   githubConfig.teamPassword = document.getElementById("wk-password").value;
@@ -1091,6 +1250,7 @@ function buildBilanMarkdown(weekDate) {
 }
 
 async function pushWeekToGithub() {
+  if (!requireAdmin()) return;
   const { workerUrl, teamPassword, userName } = githubConfig;
   if (!workerUrl || !teamPassword) {
     toast("Configuration incomplète", "Renseigne l'URL du Worker et le mot de passe équipe.", "error");
@@ -1158,6 +1318,7 @@ function exportData() {
 }
 
 function importData(event) {
+  if (!requireAdmin()) { event.target.value = ""; return; }
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1178,6 +1339,7 @@ function importData(event) {
 }
 
 async function resetAll() {
+  if (!requireAdmin()) return;
   const c1 = confirm("⚠ ATTENTION ⚠\n\nTu vas supprimer TOUTES les données PARTAGÉES :\n— toutes les ventes\n— tous les customs\n— toutes les armes d'occas\n— toute la fiche impôts\n— tous les employés\n\nTous les utilisateurs de l'app seront impactés.\nCette action est IRRÉVERSIBLE.\n\nContinuer ?");
   if (!c1) return;
   const c2 = prompt('Pour confirmer, tape : RESET');
@@ -1355,3 +1517,7 @@ document.getElementById("o-hide-sold").addEventListener("change", refreshOccas);
 // BOOT
 // ============================================================
 initUI();
+currentUser = loadCurrentUser();
+refreshUserChip();
+applyAdminLock();
+if (!currentUser) showLoginModal();

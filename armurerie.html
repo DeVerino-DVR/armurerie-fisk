@@ -45,6 +45,13 @@
         <span class="h-2 w-2 rounded-full bg-zinc-600" id="sync-dot"></span>
         <span id="sync-label" class="text-zinc-400">Local</span>
       </div>
+      <div id="user-chip" class="hidden">
+        <span id="user-chip-label" class="text-zinc-300 font-medium"></span>
+        <span id="user-chip-role" class="badge badge-muted"></span>
+        <button class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm" onclick="logout()" title="Changer d'utilisateur">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
       <div class="text-xs text-zinc-400 mono hidden md:block" id="today-date"></div>
     </div>
   </div>
@@ -90,7 +97,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
         <label class="shadcn-label">Date</label>
-        <input type="date" id="v-date" class="shadcn-input">
+        <input type="date" id="v-date" class="shadcn-input" disabled readonly>
       </div>
       <div>
         <label class="shadcn-label">Vendeur</label>
@@ -189,7 +196,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
         <label class="shadcn-label">Date</label>
-        <input type="date" id="c-date" class="shadcn-input">
+        <input type="date" id="c-date" class="shadcn-input" disabled readonly>
       </div>
       <div>
         <label class="shadcn-label">Vendeur</label>
@@ -285,7 +292,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div>
         <label class="shadcn-label">Date de reprise</label>
-        <input type="date" id="o-date" class="shadcn-input">
+        <input type="date" id="o-date" class="shadcn-input" disabled readonly>
       </div>
       <div>
         <label class="shadcn-label">Armurier</label>
@@ -437,7 +444,7 @@
       </div>
       <div>
         <label class="shadcn-label">Capital début de semaine</label>
-        <input type="number" id="i-capital" step="0.01" value="0" class="shadcn-input">
+        <input data-admin-only type="number" id="i-capital" step="0.01" value="0" class="shadcn-input">
       </div>
     </div>
   </div>
@@ -605,7 +612,7 @@
     </div>
 
     <div class="flex gap-3 mb-5 flex-wrap">
-      <button class="shadcn-btn shadcn-btn-outline" onclick="saveGithubConfig()">
+      <button data-admin-only class="shadcn-btn shadcn-btn-outline" onclick="saveGithubConfig()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
         Enregistrer la config
       </button>
@@ -627,7 +634,7 @@
           <input type="text" id="gh-commit-msg" class="shadcn-input" placeholder="Sauvegarde semaine 45">
         </div>
       </div>
-      <button class="shadcn-btn shadcn-btn-primary" id="gh-push-btn" onclick="pushWeekToGithub()">
+      <button data-admin-only class="shadcn-btn shadcn-btn-primary" id="gh-push-btn" onclick="pushWeekToGithub()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/></svg>
         <span id="gh-push-label">Sauvegarder la semaine sur GitHub</span>
       </button>
@@ -646,10 +653,10 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
         Télécharger la sauvegarde
       </button>
-      <label class="shadcn-btn shadcn-btn-outline cursor-pointer">
+      <label id="import-label" data-admin-only class="shadcn-btn shadcn-btn-outline cursor-pointer">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>
         Importer un fichier
-        <input type="file" id="import-file" accept=".json" onchange="importData(event)" class="hidden">
+        <input data-admin-only type="file" id="import-file" accept=".json" onchange="importData(event)" class="hidden">
       </label>
     </div>
   </div>
@@ -667,16 +674,16 @@
     <div class="rounded-md border border-zinc-800 bg-zinc-900/50 p-4 mb-5">
       <h3 class="text-sm font-semibold tracking-tight mb-3 uppercase text-zinc-400">Ajouter un employé</h3>
       <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
-        <input type="text" id="emp-prenom" class="shadcn-input" placeholder="Prénom">
-        <input type="text" id="emp-nom" class="shadcn-input" placeholder="Nom">
-        <select id="emp-statut" class="shadcn-input">
+        <input data-admin-only type="text" id="emp-prenom" class="shadcn-input" placeholder="Prénom">
+        <input data-admin-only type="text" id="emp-nom" class="shadcn-input" placeholder="Nom">
+        <select data-admin-only id="emp-statut" class="shadcn-input">
           <option>Patron</option>
           <option>Co-patron</option>
           <option>Gérant</option>
           <option selected>Employé</option>
         </select>
-        <input type="number" id="emp-salaire" class="shadcn-input" placeholder="Salaire" value="300" step="10">
-        <button class="shadcn-btn shadcn-btn-primary" onclick="addEmp()">
+        <input data-admin-only type="number" id="emp-salaire" class="shadcn-input" placeholder="Salaire" value="300" step="10">
+        <button data-admin-only class="shadcn-btn shadcn-btn-primary" onclick="addEmp()">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
           Ajouter
         </button>
@@ -713,7 +720,7 @@
         <p class="text-sm text-red-300/80 mt-1">Le bouton ci-dessous supprime <strong>toutes les données</strong> (ventes, customs, armes d'occas, impôts, employés). Action <strong>irréversible</strong>. Pensez à exporter une sauvegarde avant.</p>
       </div>
     </div>
-    <button class="shadcn-btn shadcn-btn-destructive" onclick="resetAll()">
+    <button data-admin-only class="shadcn-btn shadcn-btn-destructive" onclick="resetAll()">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
       Tout réinitialiser
     </button>
@@ -725,6 +732,30 @@
 
 <!-- Toast container -->
 <div id="toast-container"></div>
+
+<!-- Login modal -->
+<div id="login-modal" class="login-modal hidden">
+  <div class="login-backdrop"></div>
+  <div class="login-dialog shadcn-card p-6">
+    <div class="mb-5">
+      <h2 class="text-xl font-semibold tracking-tight">Qui êtes-vous ?</h2>
+      <p class="text-sm text-zinc-400 mt-1">Sélectionnez votre profil pour accéder à l'application.</p>
+    </div>
+    <div class="mb-4">
+      <label class="shadcn-label">Profil</label>
+      <select id="login-employe" class="shadcn-input" onchange="onLoginEmployeChange()"></select>
+    </div>
+    <div id="login-pin-row" class="mb-4 hidden">
+      <label class="shadcn-label">Code PIN (Patron / Co-patron)</label>
+      <input id="login-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" class="shadcn-input" placeholder="••••">
+    </div>
+    <p id="login-error" class="text-sm text-red-400 mb-3 min-h-[1.25rem]"></p>
+    <button class="shadcn-btn shadcn-btn-primary w-full" onclick="submitLogin()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Se connecter
+    </button>
+  </div>
+</div>
 
 <script src="app.js"></script>
 <script>
@@ -741,6 +772,11 @@
       btn.setAttribute("data-state", "active");
       document.getElementById(btn.dataset.tab).classList.remove('hidden');
     });
+  });
+
+  // Submit login on Enter
+  document.getElementById("login-modal").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); submitLogin(); }
   });
 </script>
 </body>

@@ -378,6 +378,10 @@ function fillSelect(sel, options, placeholder) {
         og.appendChild(o);
       });
       sel.appendChild(og);
+    } else if (opt.value !== undefined && opt.label !== undefined) {
+      const o = document.createElement("option");
+      o.value = opt.value; o.textContent = opt.label;
+      sel.appendChild(o);
     }
   });
 }
@@ -405,6 +409,26 @@ function armesOccasOptions() {
     value: JSON.stringify({nom, cat: p.cat}),
     label: `${nom} (neuf ${fmt(p.cat)})`
   }));
+}
+
+function armesOccasStockOptions() {
+  return data.occas
+    .filter(o => !o.vendue)
+    .sort((a,b) => (a.arme||"").localeCompare(b.arme||""))
+    .map(o => ({
+      value: String(o.id),
+      label: `${o.arme}${o.serie ? ' — ' + o.serie : ''} — ${fmt(o.prixRevente)}`
+    }));
+}
+
+function refreshOccasStockSelect() {
+  const sel = document.getElementById("v-arme-occas");
+  if (!sel) return;
+  const current = sel.value;
+  fillSelect(sel, armesOccasStockOptions(), "-- Arme d'occasion --");
+  if (current && data.occas.some(o => String(o.id) === current && !o.vendue)) {
+    sel.value = current;
+  }
 }
 
 // ============================================================
@@ -550,6 +574,7 @@ function initUI() {
   fillSelect(document.getElementById("o-vendeur"), employesList(), "-- Armurier --");
 
   fillSelect(document.getElementById("v-arme"), armesVenteOptions(), "-- Choisir une arme --");
+  fillSelect(document.getElementById("v-arme-occas"), armesOccasStockOptions(), "-- Arme d'occasion --");
   fillSelect(document.getElementById("o-arme"), [{group:"Armes reprises", items: armesOccasOptions()}], "-- Choisir une arme --");
 
   const wk = currentWeekRange();
@@ -577,8 +602,18 @@ function initUI() {
 // ============================================================
 function venteCalc() {
   const selArme = document.getElementById("v-arme").value;
+  const selOccas = document.getElementById("v-arme-occas").value;
   const qte = Number(document.getElementById("v-qte").value) || 1;
   const reduc = Number(document.getElementById("v-reduc").value) || 0;
+  if (selOccas) {
+    const o = data.occas.find(x => String(x.id) === selOccas);
+    if (o) {
+      const p = Number(o.prixRevente) || 0;
+      document.getElementById("v-prix-cat").value = p.toFixed(2);
+      document.getElementById("v-prix-final").value = p.toFixed(2);
+      return;
+    }
+  }
   if (!selArme) {
     document.getElementById("v-prix-cat").value = "";
     document.getElementById("v-prix-final").value = "";
@@ -602,9 +637,46 @@ function applyRecipe(nom, qte, sign) {
 
 function addVente() {
   const selArme = document.getElementById("v-arme").value;
+  const selOccas = document.getElementById("v-arme-occas").value;
   const vendeur = document.getElementById("v-vendeur").value;
-  if (!selArme) { alert("Choisissez une arme"); return; }
+  if (!selArme && !selOccas) { alert("Choisissez une arme"); return; }
   if (!vendeur) { alert("Choisissez un vendeur"); return; }
+
+  if (selOccas) {
+    const o = data.occas.find(x => String(x.id) === selOccas);
+    if (!o) { alert("Arme d'occasion introuvable"); return; }
+    if (o.vendue) { alert("Cette arme d'occasion est déjà vendue"); return; }
+    const prix = Number(o.prixRevente) || 0;
+    data.ventes.push({
+      id: Date.now(),
+      date: today(),
+      vendeur,
+      client: document.getElementById("v-client").value,
+      serie: o.serie || document.getElementById("v-serie").value,
+      arme: o.arme,
+      qte: 1,
+      prix,
+      reduc: 0,
+      final: prix,
+      occasId: o.id
+    });
+    o.vendue = true;
+    saveData();
+    document.getElementById("v-date").value = today();
+    document.getElementById("v-client").value = "";
+    document.getElementById("v-serie").value = "";
+    document.getElementById("v-qte").value = "1";
+    document.getElementById("v-reduc").value = "0";
+    document.getElementById("v-arme-occas").value = "";
+    document.getElementById("v-prix-cat").value = "";
+    document.getElementById("v-prix-final").value = "";
+    refreshOccasStockSelect();
+    refreshVentes();
+    refreshOccas();
+    refreshImpots();
+    return;
+  }
+
   const {nom, prix} = JSON.parse(selArme);
   const qte = Number(document.getElementById("v-qte").value) || 1;
   const reduc = Number(document.getElementById("v-reduc").value) || 0;
@@ -638,10 +710,19 @@ function delVente(id) {
   if (!requireAdmin()) return;
   if (!confirm("Supprimer cette vente ?")) return;
   const v = data.ventes.find(x => x.id === id);
-  if (v) applyRecipe(v.arme, v.qte || 1, +1);
+  if (v) {
+    if (v.occasId) {
+      const o = data.occas.find(x => x.id === v.occasId);
+      if (o) o.vendue = false;
+    } else {
+      applyRecipe(v.arme, v.qte || 1, +1);
+    }
+  }
   data.ventes = data.ventes.filter(v => v.id !== id);
   saveData();
   refreshVentes();
+  refreshOccas();
+  refreshOccasStockSelect();
   refreshImpots();
   refreshInventory();
 }
@@ -662,7 +743,7 @@ function refreshVentes() {
       <td>${v.vendeur||""}</td>
       <td>${v.client||""}</td>
       <td>${v.serie||""}</td>
-      <td>${v.arme||""}</td>
+      <td>${v.arme||""}${v.occasId ? ' <span class="badge" style="border-radius:0.375rem;background:#fff;color:#000;padding:0.05rem 0.35rem">Occas</span>' : ''}</td>
       <td>${v.qte||1}</td>
       <td>${fmt(v.prix)}</td>
       <td>${v.reduc||0}%</td>
@@ -803,6 +884,7 @@ function addOccas() {
   document.getElementById("o-serie").value = "";
   document.getElementById("o-info").value = "";
   refreshOccas();
+  refreshOccasStockSelect();
   refreshImpots();
 }
 
@@ -812,6 +894,7 @@ function toggleOccasVendue(id) {
   o.vendue = !o.vendue;
   saveData();
   refreshOccas();
+  refreshOccasStockSelect();
   refreshImpots();
 }
 
@@ -821,6 +904,7 @@ function delOccas(id) {
   data.occas = data.occas.filter(o => o.id !== id);
   saveData();
   refreshOccas();
+  refreshOccasStockSelect();
   refreshImpots();
 }
 
@@ -875,6 +959,7 @@ function submitPerso() {
   saveData();
   hidePersoModal();
   refreshOccas();
+  refreshOccasStockSelect();
   refreshImpots();
   toast("Arme perso ajoutée", `${nom} ajoutée au stock (prix reprise = $0).`, "success", 2500);
 }
@@ -1536,6 +1621,7 @@ function refreshAll() {
   refreshVentes();
   refreshCustoms();
   refreshOccas();
+  refreshOccasStockSelect();
   refreshImpots();
   refreshEmp();
   refreshInventory();
@@ -1546,7 +1632,7 @@ function refreshAll() {
 // EVENT LISTENERS
 // ============================================================
 document.addEventListener("input", e => {
-  if (["v-arme","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
+  if (["v-arme","v-arme-occas","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
   if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
   if (["i-semaine","i-du","i-au","i-capital"].includes(e.target.id)) {
@@ -1559,7 +1645,12 @@ document.addEventListener("input", e => {
   }
 });
 document.addEventListener("change", e => {
-  if (["v-arme","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
+  if (e.target.id === "v-arme" && e.target.value) {
+    document.getElementById("v-arme-occas").value = "";
+  } else if (e.target.id === "v-arme-occas" && e.target.value) {
+    document.getElementById("v-arme").value = "";
+  }
+  if (["v-arme","v-arme-occas","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
   if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
 });

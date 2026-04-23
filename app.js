@@ -9,12 +9,15 @@ const CATALOGUE = {
     "Mauser": 55, "M1899": 55, "Volcanic": 70, "Pistolet semi-automatique": 55
   },
   "Pompes / Fusils de chasse": {
-    "Canon scié": 45, "Double canon": 60, "Fusil à répétition": 140,
+    "Canon scié": 45, "Double canon": 60, "Pompe à répétition": 140,
     "Pompe": 130, "Pompe semi-auto": 160, "Éléphant": 1000
   },
   "Carabines": {
-    "Litchfield": 115, "Petit gibier": 15, "Springfield": 70,
-    "Lancaster": 105, "Evans": 90, "Verrou": 250, "Carabine à répétition": 60
+    "Litchfield": 115, "Petit gibier": 15,
+    "Lancaster": 105, "Evans": 90, "Carabine à répétition": 60
+  },
+  "Fusil": {
+    "Springfield": 70, "Verrou": 250
   },
   "Armes blanches / Lancer": {
     "Couteaux de chasse": 2, "Lasso": 2, "Lasso amélioré": 8,
@@ -53,7 +56,7 @@ const OCCAS = {
   "Pistolet semi-auto":   {cat: 55,   rachat: 23,  revente: 43},
   "Canon scié":           {cat: 45,   rachat: 20,  revente: 35},
   "Double canon":         {cat: 60,   rachat: 23,  revente: 42},
-  "Fusil à répétition":   {cat: 140,  rachat: 65,  revente: 110},
+  "Pompe à répétition":   {cat: 140,  rachat: 65,  revente: 110},
   "Pompe":                {cat: 130,  rachat: 60,  revente: 105},
   "Pompe semi-auto":      {cat: 160,  rachat: 90,  revente: 130},
   "Éléphant":             {cat: 1000, rachat: 150, revente: 250},
@@ -98,7 +101,7 @@ const RECIPES = {
   // Pompes / Fusils
   "Canon scié":                [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:2},{item:'wood_plank',amount:2}],
   "Double canon":              [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:3},{item:'wood_plank',amount:4}],
-  "Fusil à répétition":        [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
+  "Pompe à répétition":        [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
   "Pompe":                     [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
   "Pompe semi-auto":           [{item:'iron_ingot',amount:4},{item:'copper_ingot',amount:4},{item:'wood_plank',amount:4}],
   "Éléphant":                  [{item:'iron_ingot',amount:3},{item:'copper_ingot',amount:4},{item:'gold_ingot',amount:3},{item:'wood_plank',amount:4}],
@@ -1519,13 +1522,13 @@ async function resetAll() {
 // ============================================================
 // REFRESH ALL
 // ============================================================
-const PRIX_CATEGORIES = ["Revolvers", "Pistolets", "Pompes / Fusils de chasse", "Carabines"];
+const PRIX_CATEGORIES = ["Revolvers", "Pistolets", "Pompes / Fusils de chasse", "Carabines", "Fusil"];
 
 // Surcharges quand le fichier image ne correspond pas au slug auto
 const ARME_IMAGE_OVERRIDE = {
   "Pistolet semi-automatique": "pistol-semi-auto",
   "Double canon":              "double-barrel",
-  "Fusil à répétition":        "pompe-repetition",
+  "Pompe à répétition":        "pompe-repetition",
   "Verrou":                    "fusil-a-verrou",
   "Carabine à répétition":     "carabine-repetition",
 };

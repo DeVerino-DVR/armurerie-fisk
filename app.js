@@ -709,6 +709,55 @@ function addVente() {
   refreshInventory();
 }
 
+let editingVenteId = null;
+let editingCustomId = null;
+
+function escAttr(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function vendeurOptions(selected) {
+  const list = employesList();
+  let html = `<option value="">-- Vendeur --</option>`;
+  const hasSelected = list.includes(selected);
+  if (selected && !hasSelected) {
+    html += `<option value="${escAttr(selected)}" selected>${escAttr(selected)}</option>`;
+  }
+  html += list.map(n => `<option value="${escAttr(n)}"${n === selected ? " selected" : ""}>${escAttr(n)}</option>`).join("");
+  return html;
+}
+
+function startEditVente(id) {
+  editingVenteId = id;
+  refreshVentes();
+}
+
+function cancelEditVente() {
+  editingVenteId = null;
+  refreshVentes();
+}
+
+function saveEditVente(id) {
+  const v = data.ventes.find(x => x.id === id);
+  if (!v) return;
+  const date = document.getElementById(`v-edit-date-${id}`).value;
+  const vendeur = document.getElementById(`v-edit-vendeur-${id}`).value;
+  const client = document.getElementById(`v-edit-client-${id}`).value.trim();
+  const serie = document.getElementById(`v-edit-serie-${id}`).value.trim();
+  const reduc = Math.max(0, Math.min(100, Number(document.getElementById(`v-edit-reduc-${id}`).value) || 0));
+  v.date = date;
+  v.vendeur = vendeur;
+  v.client = client;
+  v.serie = serie;
+  v.reduc = reduc;
+  v.final = (Number(v.prix) || 0) * (1 - reduc / 100);
+  editingVenteId = null;
+  saveData();
+  refreshVentes();
+  refreshImpots();
+  toast("Vente modifiée", "Mise à jour enregistrée.", "success", 2500);
+}
+
 function delVente(id) {
   if (!requireAdmin()) return;
   if (!confirm("Supprimer cette vente ?")) return;
@@ -740,7 +789,33 @@ function refreshVentes() {
     (v.vendeur||"").toLowerCase().includes(search) ||
     (v.serie||"").toLowerCase().includes(search)
   ).sort((a,b) => (b.date||"").localeCompare(a.date||""));
-  tbody.innerHTML = filtered.map(v => `
+  tbody.innerHTML = filtered.map(v => {
+    if (editingVenteId === v.id) {
+      return `
+        <tr class="bg-zinc-800/40">
+          <td><input id="v-edit-date-${v.id}" type="date" class="shadcn-input" value="${escAttr(v.date||"")}"></td>
+          <td><select id="v-edit-vendeur-${v.id}" class="shadcn-input">${vendeurOptions(v.vendeur||"")}</select></td>
+          <td><input id="v-edit-client-${v.id}" class="shadcn-input" value="${escAttr(v.client||"")}"></td>
+          <td><input id="v-edit-serie-${v.id}" class="shadcn-input" value="${escAttr(v.serie||"")}"></td>
+          <td>${v.arme||""}${v.occasId ? ' <span class="badge" style="border-radius:0.375rem;background:#fff;color:#000;padding:0.05rem 0.35rem">Occas</span>' : ''}</td>
+          <td>${v.qte||1}</td>
+          <td>${fmt(v.prix)}</td>
+          <td><input id="v-edit-reduc-${v.id}" type="number" min="0" max="100" step="1" class="shadcn-input" value="${Number(v.reduc)||0}" style="width:70px"></td>
+          <td><b>${fmt(v.final)}</b></td>
+          <td class="actions-cell">
+            <div class="inline-flex gap-1">
+              <button class="shadcn-btn shadcn-btn-primary shadcn-btn-sm shadcn-btn-icon" onclick="saveEditVente(${v.id})" title="Enregistrer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon" onclick="cancelEditVente()" title="Annuler">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    return `
     <tr>
       <td>${v.date||""}</td>
       <td>${v.vendeur||""}</td>
@@ -751,9 +826,17 @@ function refreshVentes() {
       <td>${fmt(v.prix)}</td>
       <td>${v.reduc||0}%</td>
       <td><b>${fmt(v.final)}</b></td>
-      <td class="actions-cell"><button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delVente(${v.id})">✕</button></td>
+      <td class="actions-cell">
+        <div class="inline-flex gap-1">
+          <button class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon" onclick="startEditVente(${v.id})" title="Modifier">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delVente(${v.id})">✕</button>
+        </div>
+      </td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
   const total = data.ventes.reduce((s,v) => s + (v.final||0), 0);
   document.getElementById("v-total").textContent = fmt(total);
   document.getElementById("v-count").textContent = String(data.ventes.length);
@@ -805,6 +888,43 @@ function addCustom() {
   refreshImpots();
 }
 
+function startEditCustom(id) {
+  editingCustomId = id;
+  refreshCustoms();
+}
+
+function cancelEditCustom() {
+  editingCustomId = null;
+  refreshCustoms();
+}
+
+function saveEditCustom(id) {
+  const c = data.customs.find(x => x.id === id);
+  if (!c) return;
+  const date = document.getElementById(`c-edit-date-${id}`).value;
+  const vendeur = document.getElementById(`c-edit-vendeur-${id}`).value;
+  const client = document.getElementById(`c-edit-client-${id}`).value.trim();
+  const arme = document.getElementById(`c-edit-arme-${id}`).value.trim();
+  const cout = Math.max(0, Number(document.getElementById(`c-edit-cout-${id}`).value) || 0);
+  const reduc = Math.max(0, Math.min(100, Number(document.getElementById(`c-edit-reduc-${id}`).value) || 0));
+  const info = document.getElementById(`c-edit-info-${id}`).value;
+  const part = cout * 0.25;
+  c.date = date;
+  c.vendeur = vendeur;
+  c.client = client;
+  c.arme = arme;
+  c.cout = cout;
+  c.reduc = reduc;
+  c.info = info;
+  c.part = part * (1 - reduc / 100);
+  c.final = (cout + part) * (1 - reduc / 100);
+  editingCustomId = null;
+  saveData();
+  refreshCustoms();
+  refreshImpots();
+  toast("Custom modifié", "Mise à jour enregistrée.", "success", 2500);
+}
+
 function delCustom(id) {
   if (!requireAdmin()) return;
   if (!confirm("Supprimer ce custom ?")) return;
@@ -823,7 +943,33 @@ function refreshCustoms() {
     (c.arme||"").toLowerCase().includes(search) ||
     (c.vendeur||"").toLowerCase().includes(search)
   ).sort((a,b) => (b.date||"").localeCompare(a.date||""));
-  tbody.innerHTML = filtered.map(c => `
+  tbody.innerHTML = filtered.map(c => {
+    if (editingCustomId === c.id) {
+      return `
+        <tr class="bg-zinc-800/40">
+          <td><input id="c-edit-date-${c.id}" type="date" class="shadcn-input" value="${escAttr(c.date||"")}"></td>
+          <td><select id="c-edit-vendeur-${c.id}" class="shadcn-input">${vendeurOptions(c.vendeur||"")}</select></td>
+          <td><input id="c-edit-client-${c.id}" class="shadcn-input" value="${escAttr(c.client||"")}"></td>
+          <td><input id="c-edit-arme-${c.id}" class="shadcn-input" value="${escAttr(c.arme||"")}"></td>
+          <td><input id="c-edit-cout-${c.id}" type="number" min="0" step="0.01" class="shadcn-input" value="${Number(c.cout)||0}" style="width:90px"></td>
+          <td><b>${fmt(c.final)}</b></td>
+          <td style="color:#2d5a3d"><b>${fmt(c.part)}</b></td>
+          <td><input id="c-edit-reduc-${c.id}" type="number" min="0" max="100" step="1" class="shadcn-input" value="${Number(c.reduc)||0}" style="width:70px"></td>
+          <td><input id="c-edit-info-${c.id}" class="shadcn-input" value="${escAttr(c.info||"")}"></td>
+          <td class="actions-cell">
+            <div class="inline-flex gap-1">
+              <button class="shadcn-btn shadcn-btn-primary shadcn-btn-sm shadcn-btn-icon" onclick="saveEditCustom(${c.id})" title="Enregistrer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon" onclick="cancelEditCustom()" title="Annuler">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    return `
     <tr>
       <td>${c.date||""}</td>
       <td>${c.vendeur||""}</td>
@@ -834,9 +980,17 @@ function refreshCustoms() {
       <td style="color:#2d5a3d"><b>${fmt(c.part)}</b></td>
       <td>${c.reduc||0}%</td>
       <td>${c.info||""}</td>
-      <td class="actions-cell"><button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delCustom(${c.id})">✕</button></td>
+      <td class="actions-cell">
+        <div class="inline-flex gap-1">
+          <button class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon" onclick="startEditCustom(${c.id})" title="Modifier">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delCustom(${c.id})">✕</button>
+        </div>
+      </td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
   const totalFinal = data.customs.reduce((s,c) => s + (c.final||0), 0);
   const totalPart = data.customs.reduce((s,c) => s + (c.part||0), 0);
   document.getElementById("c-total").textContent = fmt(totalFinal);
@@ -1311,7 +1465,6 @@ function updateGithubStatusPill() {
 }
 
 function saveGithubConfig() {
-  if (!requireAdmin()) return;
   const urlBefore = githubConfig.workerUrl;
   githubConfig.workerUrl    = document.getElementById("wk-url").value.trim().replace(/\/$/, "");
   githubConfig.teamPassword = document.getElementById("wk-password").value;
@@ -1320,8 +1473,13 @@ function saveGithubConfig() {
   updateGithubStatusPill();
   toast("Configuration sauvegardée", "Les infos sont stockées dans ton navigateur uniquement.", "success");
   // Si URL nouvelle ou qu'on vient d'activer, recharger l'état partagé
+  // puis proposer le login une fois la liste des employés synchronisée
   if (githubConfig.workerUrl && githubConfig.workerUrl !== urlBefore) {
-    loadStateFromWorker();
+    loadStateFromWorker().then(() => {
+      if (!currentUser && data.employes && data.employes.length) showLoginModal();
+    });
+  } else if (!currentUser && data.employes && data.employes.length) {
+    showLoginModal();
   }
 }
 
@@ -1669,4 +1827,6 @@ initUI();
 currentUser = loadCurrentUser();
 refreshUserChip();
 applyAdminLock();
-if (!currentUser) showLoginModal();
+// Ne propose "Qui êtes-vous ?" que si le poste est déjà configuré (URL Worker présente).
+// Un nouvel employé non-synchronisé doit pouvoir d'abord aller dans Paramètres.
+if (!currentUser && githubConfig.workerUrl) showLoginModal();

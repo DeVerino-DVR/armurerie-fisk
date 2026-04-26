@@ -1,0 +1,66 @@
+[
+  {
+    "prenom": "Dikson",
+    "nom": "Fisk",
+    "statut": "Patron",
+    "salaire": 0,
+    "pin": "0826"
+  },
+  {
+    "prenom": "Etienne",
+    "nom": "Lefebvre",
+    "statut": "Patron",
+    "salaire": 0,
+    "pin": "0826"
+  },
+  {
+    "prenom": "Colette",
+    "nom": "Mcwilly",
+    "statut": "Co-patron",
+    "salaire": 100,
+    "pin": "0826"
+  },
+  {
+    "prenom": "Julien",
+    "nom": "Lefebvre",
+    "statut": "Co-patron",
+    "salaire": 0,
+    "pin": "0826"
+  },
+  {
+    "prenom": "Jasper",
+    "nom": "Flint",
+    "statut": "Employé",
+    "salaire": 50
+  },
+  {
+    "prenom": "Micheal",
+    "nom": "Jones",
+    "statut": "Gérant",
+    "salaire": 0
+  },
+  {
+    "prenom": "Eva",
+    "nom": "Smith",
+    "statut": "Employé",
+    "salaire": 100
+  },
+  {
+    "prenom": "Silas",
+    "nom": "Blackwood",
+    "statut": "Employé",
+    "salaire": 100
+  },
+  {
+    "prenom": "John",
+    "nom": "Taylor",
+    "statut": "Employé",
+    "salaire": 10
+  },
+  {
+    "prenom": "Ivy",
+    "nom": "Cross",
+    "statut": "Employé",
+    "salaire": 0
+  }
+]

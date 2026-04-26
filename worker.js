@@ -49,6 +49,7 @@ const DEFAULT_STATE = {
     { prenom: "James",   nom: "Heller",   statut: "Employé",   salaire: 300 }
   ],
   impots: { semaine: "", du: "", au: "", capital: 0 },
+  partenaires: [],
   meta: { updatedAt: null, updatedBy: null, version: 0 }
 };
 

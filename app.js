@@ -85,6 +85,22 @@ const MATERIALS = [
 ];
 const MAT_LABEL_TO_ID = Object.fromEntries(MATERIALS.map(m => [m.label, m.id]));
 
+// Prix d'achat de nos matières premières (utilisé pour le calcul du prix à payer
+// des armes perso : on facture l'employé au coût des matières que nous on a payées)
+const MATERIAL_PRICES = {
+  iron:          0.03,  // Minerai de fer
+  iron_ingot:    5.00,  // Lingot de fer
+  copper_ingot:  7.50,  // Lingot de cuivre
+  gold_ingot:    40.00, // Lingot d'or
+  wood_plank:    0.06,  // Planche
+  small_leather: 0,     // non utilisé pour les armes à feu
+  big_leather:   0,     // non utilisé pour les armes à feu
+  cloth:         0.10,  // Chiffon
+  clothe_coton:  0.30,  // Linge de coton
+  coal:          0.03,  // Charbon
+  charcoal_bag:  1.00,  // Sac de charbon
+};
+
 // Recettes : mapping nom du catalogue -> matières consommées par unité produite
 const RECIPES = {
   // Revolvers
@@ -192,6 +208,7 @@ function loadData() {
         });
       }
       if (!Array.isArray(parsed.armesPerso)) parsed.armesPerso = [];
+      if (!Array.isArray(parsed.partenaires)) parsed.partenaires = [];
       return parsed;
     } catch(e) {}
   }
@@ -203,6 +220,7 @@ function loadData() {
     depNonDed: [],
     employes: [...EMPLOYES_DEFAULT],
     armesPerso: [],
+    partenaires: [],
     impots: { semaine: "", du: "", au: "", capital: 0 },
     inventory: emptyInventory()
   };
@@ -676,6 +694,7 @@ function addVente() {
     document.getElementById("v-arme-occas").value = "";
     document.getElementById("v-prix-cat").value = "";
     document.getElementById("v-prix-final").value = "";
+    document.getElementById("v-partenaire").value = "";
     refreshOccasStockSelect();
     refreshVentes();
     refreshOccas();
@@ -707,6 +726,7 @@ function addVente() {
   document.getElementById("v-serie").value = "";
   document.getElementById("v-qte").value = "1";
   document.getElementById("v-reduc").value = "0";
+  document.getElementById("v-partenaire").value = "";
   refreshVentes();
   refreshImpots();
   refreshInventory();
@@ -2111,6 +2131,36 @@ function refreshArmePersoSelect() {
   sel.innerHTML = `<option value="">-- Employé --</option>` +
     list.map(n => `<option value="${escAttr(n)}">${escAttr(n)}</option>`).join("");
   if (current && list.includes(current)) sel.value = current;
+
+  const armeSel = document.getElementById("ap-arme");
+  if (armeSel && armeSel.tagName === "SELECT") {
+    const currentArme = armeSel.value;
+    const opts = [];
+    for (const [cat, armes] of Object.entries(CATALOGUE)) {
+      const lower = cat.toLowerCase();
+      if (lower.startsWith("munitions") || lower.startsWith("armes blanches") || lower === "divers") continue;
+      opts.push({
+        group: cat,
+        items: Object.keys(armes).map(nom => ({ value: nom, label: nom }))
+      });
+    }
+    fillSelect(armeSel, opts, "-- Choisir une arme --");
+    if (currentArme) armeSel.value = currentArme;
+  }
+  updateArmePersoPrice();
+}
+
+function computeArmePersoPrice(armeName) {
+  const recipe = RECIPES[armeName];
+  if (!recipe) return 0;
+  return recipe.reduce((sum, mat) => sum + (MATERIAL_PRICES[mat.item] || 0) * (mat.amount || 0), 0);
+}
+
+function updateArmePersoPrice() {
+  const arme = document.getElementById("ap-arme")?.value || "";
+  const prix = computeArmePersoPrice(arme);
+  const el = document.getElementById("ap-prix");
+  if (el) el.value = fmt(prix);
 }
 
 function addArmePerso() {
@@ -2119,18 +2169,21 @@ function addArmePerso() {
   const serie = document.getElementById("ap-serie").value.trim();
   if (!employe) { alert("Choisissez un employé"); return; }
   if (!arme) { alert("Renseignez le nom de l'arme"); return; }
+  const prix = computeArmePersoPrice(arme);
   data.armesPerso.push({
     id: Date.now(),
     date: today(),
     employe,
     arme,
-    serie
+    serie,
+    prix
   });
   saveData();
   document.getElementById("ap-arme").value = "";
   document.getElementById("ap-serie").value = "";
+  updateArmePersoPrice();
   refreshArmesPerso();
-  toast("Arme déclarée", `${arme} ajoutée pour ${employe}.`, "success", 2500);
+  toast("Arme déclarée", `${arme} ajoutée pour ${employe} (${fmt(prix)}).`, "success", 2500);
 }
 
 function delArmePerso(id) {
@@ -2156,6 +2209,7 @@ function refreshArmesPerso() {
       <td class="font-medium">${escAttr(a.employe || "")}</td>
       <td>${escAttr(a.arme || "")}</td>
       <td class="mono">${escAttr(a.serie || "")}</td>
+      <td class="text-right mono">${a.prix != null ? fmt(a.prix) : ""}</td>
       <td class="actions-cell">
         <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delArmePerso(${a.id})" title="Supprimer">✕</button>
       </td>
@@ -2175,7 +2229,240 @@ function refreshAll() {
   refreshEmp();
   refreshInventory();
   refreshArmesPerso();
+  refreshPartenaires();
   renderPrix();
+}
+
+// ============================================================
+// PARTENAIRES — entreprises avec accords de remise
+// ============================================================
+function togglePartenaireField(which) {
+  const cb = document.getElementById(`part-${which}-active`);
+  const wrap = document.getElementById(`part-${which}-wrap`);
+  if (!cb || !wrap) return;
+  wrap.classList.toggle("hidden", !cb.checked);
+}
+
+function addPartenaire() {
+  if (!requireAdmin()) return;
+  const nom = document.getElementById("part-nom").value.trim();
+  const detail = document.getElementById("part-detail").value.trim();
+  const armesActive = document.getElementById("part-armes-active").checked;
+  const munsActive = document.getElementById("part-muns-active").checked;
+  const pctArmes = Number(document.getElementById("part-armes-pct").value) || 0;
+  const pctMuns = Number(document.getElementById("part-muns-pct").value) || 0;
+
+  if (!nom) { toast("Erreur", "Renseigne le nom du partenaire.", "error"); return; }
+  if (!armesActive && !munsActive) { toast("Erreur", "Coche au moins une catégorie de remise.", "error"); return; }
+  if (armesActive && (pctArmes <= 0 || pctArmes > 100)) { toast("Erreur", "Pourcentage armes à feu invalide (1-100).", "error"); return; }
+  if (munsActive && (pctMuns <= 0 || pctMuns > 100)) { toast("Erreur", "Pourcentage munitions invalide (1-100).", "error"); return; }
+
+  data.partenaires.push({
+    id: Date.now(),
+    nom,
+    detail,
+    armesFeu: { active: armesActive, pct: armesActive ? pctArmes : 0 },
+    munitions: { active: munsActive, pct: munsActive ? pctMuns : 0 }
+  });
+  saveData();
+
+  document.getElementById("part-nom").value = "";
+  document.getElementById("part-detail").value = "";
+  document.getElementById("part-armes-active").checked = false;
+  document.getElementById("part-muns-active").checked = false;
+  document.getElementById("part-armes-pct").value = "";
+  document.getElementById("part-muns-pct").value = "";
+  togglePartenaireField("armes");
+  togglePartenaireField("muns");
+
+  refreshPartenaires();
+  toast("Partenaire ajouté", `${nom} enregistré.`, "success", 2500);
+}
+
+function delPartenaire(id) {
+  if (!requireAdmin()) return;
+  const p = data.partenaires.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Supprimer le partenaire « ${p.nom} » ?`)) return;
+  data.partenaires = data.partenaires.filter(x => x.id !== id);
+  saveData();
+  refreshPartenaires();
+}
+
+let editingPartenaireId = null;
+
+function startEditPartenaire(id) {
+  if (!requireAdmin()) return;
+  editingPartenaireId = id;
+  refreshPartenaires();
+}
+
+function cancelEditPartenaire() {
+  editingPartenaireId = null;
+  refreshPartenaires();
+}
+
+function saveEditPartenaire(id) {
+  if (!requireAdmin()) return;
+  const p = data.partenaires.find(x => x.id === id);
+  if (!p) return;
+  const nom = document.getElementById(`part-edit-nom-${id}`).value.trim();
+  const detail = document.getElementById(`part-edit-detail-${id}`).value.trim();
+  const armesActive = document.getElementById(`part-edit-armes-active-${id}`).checked;
+  const munsActive = document.getElementById(`part-edit-muns-active-${id}`).checked;
+  const pctArmes = Number(document.getElementById(`part-edit-armes-pct-${id}`).value) || 0;
+  const pctMuns = Number(document.getElementById(`part-edit-muns-pct-${id}`).value) || 0;
+
+  if (!nom) { toast("Erreur", "Le nom est obligatoire.", "error"); return; }
+  if (!armesActive && !munsActive) { toast("Erreur", "Coche au moins une catégorie de remise.", "error"); return; }
+  if (armesActive && (pctArmes <= 0 || pctArmes > 100)) { toast("Erreur", "Pourcentage armes à feu invalide (1-100).", "error"); return; }
+  if (munsActive && (pctMuns <= 0 || pctMuns > 100)) { toast("Erreur", "Pourcentage munitions invalide (1-100).", "error"); return; }
+
+  p.nom = nom;
+  p.detail = detail;
+  p.armesFeu = { active: armesActive, pct: armesActive ? pctArmes : 0 };
+  p.munitions = { active: munsActive, pct: munsActive ? pctMuns : 0 };
+
+  editingPartenaireId = null;
+  saveData();
+  refreshPartenaires();
+  toast("Partenaire modifié", `${nom} mis à jour.`, "success", 2500);
+}
+
+function refreshPartenaires() {
+  const tbody = document.getElementById("part-table");
+  if (!tbody) return;
+  const search = (document.getElementById("part-search")?.value || "").toLowerCase();
+  const list = (data.partenaires || []).filter(p =>
+    !search ||
+    (p.nom || "").toLowerCase().includes(search) ||
+    (p.detail || "").toLowerCase().includes(search)
+  ).sort((a, b) => (a.nom || "").localeCompare(b.nom || ""));
+
+  tbody.innerHTML = list.length ? list.map(p => {
+    if (editingPartenaireId === p.id) {
+      const af = p.armesFeu || { active: false, pct: 0 };
+      const mn = p.munitions || { active: false, pct: 0 };
+      return `
+        <tr class="bg-zinc-800/40">
+          <td><input id="part-edit-nom-${p.id}" class="shadcn-input" value="${escAttr(p.nom)}"></td>
+          <td><input id="part-edit-detail-${p.id}" class="shadcn-input" value="${escAttr(p.detail || "")}"></td>
+          <td class="text-right" style="white-space:nowrap">
+            <label class="inline-flex items-center gap-1">
+              <input id="part-edit-armes-active-${p.id}" type="checkbox" ${af.active ? "checked" : ""}>
+              <input id="part-edit-armes-pct-${p.id}" type="number" min="0" max="100" step="0.01" class="shadcn-input" value="${af.pct || ""}" style="width:60px">
+              <span class="text-zinc-400">%</span>
+            </label>
+          </td>
+          <td class="text-right" style="white-space:nowrap">
+            <label class="inline-flex items-center gap-1">
+              <input id="part-edit-muns-active-${p.id}" type="checkbox" ${mn.active ? "checked" : ""}>
+              <input id="part-edit-muns-pct-${p.id}" type="number" min="0" max="100" step="0.01" class="shadcn-input" value="${mn.pct || ""}" style="width:60px">
+              <span class="text-zinc-400">%</span>
+            </label>
+          </td>
+          <td class="actions-cell">
+            <div class="inline-flex gap-1">
+              <button class="shadcn-btn shadcn-btn-primary shadcn-btn-sm shadcn-btn-icon" onclick="saveEditPartenaire(${p.id})" title="Enregistrer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon" onclick="cancelEditPartenaire()" title="Annuler">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    return `
+      <tr>
+        <td class="font-medium">${escAttr(p.nom)}</td>
+        <td class="text-zinc-400">${escAttr(p.detail || "")}</td>
+        <td class="text-right mono" style="white-space:nowrap">${p.armesFeu?.active ? p.armesFeu.pct + "%" : "—"}</td>
+        <td class="text-right mono" style="white-space:nowrap">${p.munitions?.active ? p.munitions.pct + "%" : "—"}</td>
+        <td class="actions-cell">
+          <div class="inline-flex gap-1">
+            <button data-admin-only class="shadcn-btn shadcn-btn-ghost shadcn-btn-sm shadcn-btn-icon" onclick="startEditPartenaire(${p.id})" title="Modifier">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delPartenaire(${p.id})" title="Supprimer">✕</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("") : `<tr><td colspan="5" class="text-center text-zinc-500 py-4">Aucun partenaire</td></tr>`;
+
+  document.getElementById("part-count").textContent = String((data.partenaires || []).length);
+  refreshPartenaireSelectInVente();
+  applyAdminLock();
+}
+
+function refreshPartenaireSelectInVente() {
+  const sel = document.getElementById("v-partenaire");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = `<option value="">-- Aucun --</option>`;
+  (data.partenaires || []).slice().sort((a,b) => (a.nom||"").localeCompare(b.nom||""))
+    .forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = String(p.id);
+      const parts = [];
+      if (p.armesFeu?.active) parts.push(`armes ${p.armesFeu.pct}%`);
+      if (p.munitions?.active) parts.push(`muns ${p.munitions.pct}%`);
+      opt.textContent = `${p.nom}${parts.length ? " (" + parts.join(", ") + ")" : ""}`;
+      sel.appendChild(opt);
+    });
+  if (current && data.partenaires.some(p => String(p.id) === current)) sel.value = current;
+}
+
+function getCategoryOfArme(armeName) {
+  for (const [cat, armes] of Object.entries(CATALOGUE)) {
+    if (armes[armeName] !== undefined) return cat;
+  }
+  return null;
+}
+
+function applyPartenaireReduc() {
+  const partId = document.getElementById("v-partenaire")?.value || "";
+  const reducSel = document.getElementById("v-reduc");
+  if (!reducSel) return;
+
+  // Aucun partenaire — on ne touche pas la réduction manuelle
+  if (!partId) return;
+
+  const part = (data.partenaires || []).find(p => String(p.id) === partId);
+  if (!part) return;
+
+  // Identifier la catégorie de l'arme actuellement sélectionnée
+  const armeRaw = document.getElementById("v-arme")?.value || "";
+  if (!armeRaw) { setReducValue(reducSel, 0); venteCalc(); return; }
+  let armeNom;
+  try { armeNom = JSON.parse(armeRaw).nom; } catch { return; }
+  const cat = getCategoryOfArme(armeNom);
+  if (!cat) return;
+  const lower = cat.toLowerCase();
+
+  let pct = 0;
+  if (lower.startsWith("munitions")) {
+    pct = part.munitions?.active ? (part.munitions.pct || 0) : 0;
+  } else if (!lower.startsWith("armes blanches") && lower !== "divers") {
+    // Toutes les autres catégories = armes à feu
+    pct = part.armesFeu?.active ? (part.armesFeu.pct || 0) : 0;
+  }
+  setReducValue(reducSel, pct);
+  venteCalc();
+}
+
+function setReducValue(sel, pct) {
+  // Ajoute dynamiquement l'option si elle n'existe pas (le select n'a que 0/5/10/15 par défaut)
+  const exists = [...sel.options].some(o => Number(o.value) === pct);
+  if (!exists) {
+    const opt = document.createElement("option");
+    opt.value = String(pct);
+    opt.textContent = `${pct}%`;
+    sel.appendChild(opt);
+  }
+  sel.value = String(pct);
 }
 
 // ============================================================
@@ -2201,6 +2488,7 @@ document.addEventListener("change", e => {
     document.getElementById("v-arme").value = "";
   }
   if (["v-arme","v-arme-occas","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
+  if (["v-arme","v-partenaire"].includes(e.target.id)) applyPartenaireReduc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
   if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
 });
@@ -2209,6 +2497,7 @@ document.getElementById("v-search").addEventListener("input", refreshVentes);
 document.getElementById("c-search").addEventListener("input", refreshCustoms);
 document.getElementById("o-hide-sold").addEventListener("change", refreshOccas);
 document.getElementById("ap-search").addEventListener("input", refreshArmesPerso);
+document.getElementById("part-search").addEventListener("input", refreshPartenaires);
 
 // ============================================================
 // BOOT

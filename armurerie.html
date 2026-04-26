@@ -74,6 +74,8 @@
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="armes-perso">Armes perso</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="partenaires">Partenaires</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="impots">Impôts / Bilan</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="saves">Saves</button>
@@ -143,6 +145,12 @@
       <div>
         <label class="shadcn-label">Prix final</label>
         <input type="number" id="v-prix-final" readonly class="shadcn-input">
+      </div>
+      <div>
+        <label class="shadcn-label">Partenaire</label>
+        <select id="v-partenaire" class="shadcn-input">
+          <option value="">-- Aucun --</option>
+        </select>
       </div>
     </div>
 
@@ -443,18 +451,22 @@
       <h2 class="text-xl font-semibold tracking-tight">Déclarer une arme personnelle</h2>
       <p class="text-sm text-zinc-400 mt-1">Permet à chaque employé d'enregistrer ses armes personnelles avec leur numéro de série.</p>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
       <div>
         <label class="shadcn-label">Employé</label>
         <select id="ap-employe" class="shadcn-input"></select>
       </div>
       <div>
         <label class="shadcn-label">Nom de l'arme</label>
-        <input type="text" id="ap-arme" class="shadcn-input" placeholder="Ex: Cattleman, LeMat...">
+        <select id="ap-arme" class="shadcn-input" onchange="updateArmePersoPrice()"></select>
       </div>
       <div>
         <label class="shadcn-label">Numéro de série</label>
         <input type="text" id="ap-serie" class="shadcn-input" placeholder="N° de série">
+      </div>
+      <div>
+        <label class="shadcn-label">Prix à payer</label>
+        <input type="text" id="ap-prix" class="shadcn-input mono" readonly value="$0.00" title="Calculé automatiquement à partir des matières premières">
       </div>
       <div class="flex items-end">
         <button class="shadcn-btn shadcn-btn-primary w-full" onclick="addArmePerso()">
@@ -480,10 +492,92 @@
             <th>Employé</th>
             <th>Arme</th>
             <th>Numéro de série</th>
+            <th class="text-right">Prix payé</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="ap-table"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PARTENAIRES — entreprises avec accords de remise
+     ============================================================ -->
+<section id="partenaires" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-5">
+      <h2 class="text-xl font-semibold tracking-tight">Ajouter un partenaire</h2>
+      <p class="text-sm text-zinc-400 mt-1">Définit une entreprise partenaire et les remises négociées sur les armes à feu et munitions. Création réservée aux patrons.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="shadcn-label">Nom de l'entreprise</label>
+        <input data-admin-only type="text" id="part-nom" class="shadcn-input" placeholder="Ex: Cotonnerie Saint-Denis">
+      </div>
+      <div>
+        <label class="shadcn-label">Détail / notes</label>
+        <input data-admin-only type="text" id="part-detail" class="shadcn-input" placeholder="Ex: accord du 12/04, négocié par Dikson">
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+      <div class="rounded-md border border-zinc-800 p-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input data-admin-only type="checkbox" id="part-armes-active" onchange="togglePartenaireField('armes')">
+          <span class="text-sm font-medium">Remise sur les armes à feu</span>
+        </label>
+        <div id="part-armes-wrap" class="mt-2 hidden">
+          <label class="shadcn-label">Pourcentage</label>
+          <div class="flex items-center gap-2">
+            <input data-admin-only type="number" id="part-armes-pct" class="shadcn-input flex-1" placeholder="ex: 15" step="0.01" min="0" max="100">
+            <span class="text-zinc-400">%</span>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-md border border-zinc-800 p-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input data-admin-only type="checkbox" id="part-muns-active" onchange="togglePartenaireField('muns')">
+          <span class="text-sm font-medium">Remise sur les munitions</span>
+        </label>
+        <div id="part-muns-wrap" class="mt-2 hidden">
+          <label class="shadcn-label">Pourcentage</label>
+          <div class="flex items-center gap-2">
+            <input data-admin-only type="number" id="part-muns-pct" class="shadcn-input flex-1" placeholder="ex: 10" step="0.01" min="0" max="100">
+            <span class="text-zinc-400">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button data-admin-only class="shadcn-btn shadcn-btn-primary" onclick="addPartenaire()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Ajouter le partenaire
+      </button>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6">
+    <div class="flex items-start justify-between mb-5 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Partenaires actuels</h2>
+        <p class="text-sm text-zinc-400 mt-1">Total : <span class="mono font-medium text-zinc-50" id="part-count">0</span></p>
+      </div>
+      <input type="text" id="part-search" class="shadcn-input" placeholder="Rechercher..." style="max-width:320px">
+    </div>
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <table class="shadcn-table">
+        <thead>
+          <tr>
+            <th style="width:200px">Entreprise</th>
+            <th>Détail</th>
+            <th class="text-right" style="width:1%; white-space:nowrap">Armes à feu</th>
+            <th class="text-right" style="width:1%; white-space:nowrap">Munitions</th>
+            <th style="width:1%"></th>
+          </tr>
+        </thead>
+        <tbody id="part-table"></tbody>
       </table>
     </div>
   </div>

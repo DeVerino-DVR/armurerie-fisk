@@ -1287,6 +1287,211 @@ function refreshImpots() {
 }
 
 // ============================================================
+// DECLARATION IMPOTS (Google Form)
+// ============================================================
+function declarerImpots() {
+  if (!requireAdmin()) return;
+  const parseAmount = id => Number(document.getElementById(id).textContent.replace(/[^0-9.-]/g, "")) || 0;
+
+  const semaine = document.getElementById("i-semaine").value || "";
+  const revenus = parseAmount("r-revenus");
+  const salaires = Math.abs(parseAmount("r-salaires"));
+  const depDed = Math.abs(parseAmount("r-dep-ded"));
+
+  if (!semaine) { toast("Erreur", "Numéro de semaine manquant.", "error"); return; }
+  if (!confirm(`Ouvrir le formulaire pré-rempli ?\n\nSemaine ${semaine}\nCA état : $${revenus.toFixed(2)}\nSalaires : $${salaires.toFixed(2)}\nDépenses déductibles : $${depDed.toFixed(2)}\n\nUn nouvel onglet s'ouvrira — il te restera juste à cliquer sur « Envoyer ».`)) return;
+
+  const params = new URLSearchParams();
+  params.append("entry.2140902972", "Armurerie SD");                                              // 1. Entreprise
+  params.append("entry.124962958",  semaine);                                                     // 2. Numéro de semaine
+  params.append("entry.257249662",  "Carcan'hoes");                                               // 3. Nom de l'entreprise
+  params.append("entry.1340703769", "Dikson Fisk");                                               // 4. Nom du patron
+  params.append("entry.1802704089", "");                                                          // 5. Nom et statut du déclarant
+  params.append("entry.1760474528", "Lemoyne");                                                   // 6. Lieu de résidence
+  params.append("entry.432488176",  String(revenus));                                             // 7. CA brut dans l'état
+  params.append("entry.796430099",  "0");                                                         // 8. CA brut en export
+  params.append("entry.1576201722", String(salaires));                                            // 9. Total salaires hors primes
+  params.append("entry.1712870861", String(depDed));                                              // 10. Total dépenses déductibles
+  params.append("entry.1545824926", "https://deverino-dvr.github.io/armurerie-fisk/armurerie.html"); // 11. Lien Gsheet
+  params.append("usp", "pp_url");
+
+  const url = "https://docs.google.com/forms/d/e/1FAIpQLSfHBW3k5LJxhnIOxFagRoCDJVJiLkIC3SjLLJXBua-ipsBjng/viewform?" + params.toString();
+  const win = window.open(url, "_blank");
+  if (!win) {
+    toast("Pop-up bloqué", "Autorise les pop-ups pour ce site et réessaye.", "error");
+    return;
+  }
+  toast("Formulaire ouvert", "Vérifie les valeurs puis clique sur « Envoyer » dans le nouvel onglet.", "success");
+}
+
+// ============================================================
+// SAVES — historique des semaines archivées sur GitHub
+// ============================================================
+const SAVES_GH_OWNER  = "DeVerino-DVR";
+const SAVES_GH_REPO   = "armurerie-fisk";
+const SAVES_GH_BRANCH = "main";
+
+let savesData = null;
+let savesLoadPromise = null;
+
+async function loadSaves(force = false) {
+  if (savesData && !force) { renderSaves(); return; }
+  if (savesLoadPromise) return savesLoadPromise;
+
+  const loading = document.getElementById("saves-loading");
+  const errorEl = document.getElementById("saves-error");
+  const content = document.getElementById("saves-content");
+  loading.classList.remove("hidden");
+  errorEl.classList.add("hidden");
+  content.classList.add("hidden");
+
+  savesLoadPromise = (async () => {
+    try {
+      const apiUrl = `https://api.github.com/repos/${SAVES_GH_OWNER}/${SAVES_GH_REPO}/contents/saves?ref=${SAVES_GH_BRANCH}`;
+      const listRes = await fetch(apiUrl);
+      if (!listRes.ok) {
+        if (listRes.status === 403) throw new Error("Limite API GitHub atteinte. Réessaye dans une heure.");
+        if (listRes.status === 404) throw new Error("Aucune sauvegarde trouvée sur le repo.");
+        throw new Error(`API GitHub: ${listRes.status}`);
+      }
+      const list = await listRes.json();
+      const weeks = list
+        .filter(item => item.type === "dir" && item.name.startsWith("semaine-"))
+        .map(item => item.name)
+        .sort()
+        .reverse();
+
+      const fetchJson = async (week, file) => {
+        const url = `https://raw.githubusercontent.com/${SAVES_GH_OWNER}/${SAVES_GH_REPO}/${SAVES_GH_BRANCH}/saves/${week}/${file}`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        try { return await res.json(); } catch { return []; }
+      };
+
+      const allVentes = [];
+      const allCustoms = [];
+      const allOccasSold = [];
+
+      await Promise.all(weeks.map(async week => {
+        const [ventes, customs, occas] = await Promise.all([
+          fetchJson(week, "ventes.json"),
+          fetchJson(week, "customs.json"),
+          fetchJson(week, "occas.json")
+        ]);
+
+        ventes.forEach(v => {
+          if (!v.occasId) allVentes.push({ ...v, semaine: week });
+        });
+        customs.forEach(c => allCustoms.push({ ...c, semaine: week }));
+
+        occas.forEach(o => {
+          if (!o.vendue) return;
+          const resale = ventes.find(v => v.occasId === o.id);
+          allOccasSold.push({
+            semaine: week,
+            date: resale?.date || o.date,
+            vendeur: resale?.vendeur || o.vendeur,
+            clientRachat: o.client,
+            clientRevente: resale?.client || "",
+            arme: o.arme,
+            serie: o.serie,
+            prixReprise: o.prixReprise,
+            prixRevente: resale?.final ?? o.prixRevente
+          });
+        });
+      }));
+
+      savesData = { ventes: allVentes, customs: allCustoms, occasSold: allOccasSold, weeks };
+
+      const sel = document.getElementById("saves-week");
+      sel.innerHTML = '<option value="">Toutes les semaines</option>';
+      weeks.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = w.replace("semaine-", "Semaine du ");
+        sel.appendChild(opt);
+      });
+
+      document.getElementById("saves-meta").textContent = ` · ${weeks.length} semaine(s) chargée(s)`;
+      loading.classList.add("hidden");
+      content.classList.remove("hidden");
+      renderSaves();
+    } catch (e) {
+      loading.classList.add("hidden");
+      errorEl.classList.remove("hidden");
+      errorEl.textContent = `Erreur de chargement : ${e.message}`;
+    } finally {
+      savesLoadPromise = null;
+    }
+  })();
+  return savesLoadPromise;
+}
+
+function renderSaves() {
+  if (!savesData) return;
+  const search = document.getElementById("saves-search").value.toLowerCase().trim();
+  const week = document.getElementById("saves-week").value;
+
+  const matches = (row, fields) => {
+    if (week && row.semaine !== week) return false;
+    if (!search) return true;
+    return fields.some(f => String(row[f] || "").toLowerCase().includes(search));
+  };
+  const weekLabel = w => w ? w.replace("semaine-", "") : "";
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  const ventes  = savesData.ventes.filter(v => matches(v, ["arme","client","serie","vendeur"]));
+  const customs = savesData.customs.filter(c => matches(c, ["arme","client","vendeur"]));
+  const occas   = savesData.occasSold.filter(o => matches(o, ["arme","clientRachat","clientRevente","serie","vendeur"]));
+
+  const vBody = document.getElementById("saves-ventes-table");
+  vBody.innerHTML = ventes.length ? ventes.map(v => `
+    <tr>
+      <td class="text-zinc-500">${esc(weekLabel(v.semaine))}</td>
+      <td>${esc(v.date)}</td>
+      <td>${esc(v.vendeur)}</td>
+      <td>${esc(v.client)}</td>
+      <td class="mono text-xs">${esc(v.serie)}</td>
+      <td>${esc(v.arme)}${v.qte > 1 ? ` × ${v.qte}` : ""}</td>
+      <td class="text-right mono">${fmt(v.prix)}</td>
+      <td class="text-right mono">${(Number(v.reduc) > 0 || v.final !== v.prix) ? fmt(v.final) : ""}</td>
+    </tr>`).join("") : `<tr><td colspan="8" class="text-center text-zinc-500 py-4">Aucune vente</td></tr>`;
+  document.getElementById("saves-ventes-count").textContent = ventes.length;
+  document.getElementById("saves-ventes-total").textContent = fmt(ventes.reduce((s,v) => s + (v.final||0), 0));
+
+  const cBody = document.getElementById("saves-customs-table");
+  cBody.innerHTML = customs.length ? customs.map(c => `
+    <tr>
+      <td class="text-zinc-500">${esc(weekLabel(c.semaine))}</td>
+      <td>${esc(c.date)}</td>
+      <td>${esc(c.vendeur)}</td>
+      <td>${esc(c.client)}</td>
+      <td>${esc(c.arme)}</td>
+      <td class="text-right mono">${fmt(c.cout)}</td>
+      <td class="text-right mono">${fmt(c.final)}</td>
+      <td class="text-right mono">${fmt(c.part)}</td>
+    </tr>`).join("") : `<tr><td colspan="8" class="text-center text-zinc-500 py-4">Aucune custom</td></tr>`;
+  document.getElementById("saves-customs-count").textContent = customs.length;
+  document.getElementById("saves-customs-total").textContent = fmt(customs.reduce((s,c) => s + (c.part||0), 0));
+
+  const oBody = document.getElementById("saves-occas-table");
+  oBody.innerHTML = occas.length ? occas.map(o => `
+    <tr>
+      <td class="text-zinc-500">${esc(weekLabel(o.semaine))}</td>
+      <td>${esc(o.date)}</td>
+      <td>${esc(o.vendeur)}</td>
+      <td>${esc(o.clientRachat)}</td>
+      <td>${esc(o.clientRevente)}</td>
+      <td>${esc(o.arme)}</td>
+      <td class="mono text-xs">${esc(o.serie)}</td>
+      <td class="text-right mono">${fmt(o.prixReprise)}</td>
+      <td class="text-right mono">${fmt(o.prixRevente)}</td>
+    </tr>`).join("") : `<tr><td colspan="9" class="text-center text-zinc-500 py-4">Aucune arme d'occasion vendue</td></tr>`;
+  document.getElementById("saves-occas-count").textContent = occas.length;
+  document.getElementById("saves-occas-total").textContent = fmt(occas.reduce((s,o) => s + ((o.prixRevente||0) - (o.prixReprise||0)), 0));
+}
+
+// ============================================================
 // EMPLOYES
 // ============================================================
 function addEmp() {

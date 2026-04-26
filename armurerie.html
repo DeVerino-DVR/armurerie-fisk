@@ -76,6 +76,8 @@
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="impots">Impôts / Bilan</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="saves">Saves</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="params">Paramètres</button>
     </div>
   </div>
@@ -659,6 +661,151 @@
       </div>
     </div>
   </div>
+
+  <!-- Déclaration officielle -->
+  <div class="shadcn-card p-6 mt-6">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h3 class="text-lg font-semibold tracking-tight">Déclaration officielle</h3>
+        <p class="text-sm text-zinc-400 mt-1">Envoie automatiquement les chiffres de la semaine au formulaire d'impôts de l'État.</p>
+      </div>
+      <button data-admin-only class="shadcn-btn shadcn-btn-primary" onclick="declarerImpots()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+        Déclarer les impôts
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SAVES — récap des semaines archivées sur GitHub
+     ============================================================ -->
+<section id="saves" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Historique des semaines archivées</h2>
+        <p class="text-sm text-zinc-400 mt-1">
+          Récap de toutes les ventes / customs / armes d'occasion archivées sur GitHub.
+          <span id="saves-meta" class="text-zinc-500"></span>
+        </p>
+      </div>
+      <button class="shadcn-btn shadcn-btn-outline" onclick="loadSaves(true)">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0114-3.5M20 15a8 8 0 01-14 3.5"/></svg>
+        Recharger
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="md:col-span-2">
+        <label class="shadcn-label">Recherche (arme, client, n° de série)</label>
+        <input type="text" id="saves-search" class="shadcn-input" placeholder="Schofield, Jackson Dallas, 1776800-..." oninput="renderSaves()">
+      </div>
+      <div>
+        <label class="shadcn-label">Semaines</label>
+        <select id="saves-week" class="shadcn-input" onchange="renderSaves()">
+          <option value="">Toutes les semaines</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="saves-loading" class="shadcn-card p-6 mb-6 text-center text-zinc-400 hidden">
+    Chargement des archives depuis GitHub...
+  </div>
+
+  <div id="saves-error" class="shadcn-card p-6 mb-6 text-center text-red-400 hidden"></div>
+
+  <div id="saves-content" class="hidden">
+    <!-- Ventes -->
+    <div class="shadcn-card p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold tracking-tight">Ventes (armes neuves)</h3>
+          <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="saves-ventes-count">0</span> ligne(s) · <span class="mono font-medium text-zinc-50" id="saves-ventes-total">$0.00</span></p>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-md border border-zinc-800">
+        <div class="overflow-auto max-h-[500px]">
+          <table class="shadcn-table">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>Date</th>
+                <th>Vendeur</th>
+                <th>Client</th>
+                <th>N° série</th>
+                <th>Arme</th>
+                <th class="text-right">Prix</th>
+                <th class="text-right">Prix réduit</th>
+              </tr>
+            </thead>
+            <tbody id="saves-ventes-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customs -->
+    <div class="shadcn-card p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold tracking-tight">Customs</h3>
+          <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="saves-customs-count">0</span> ligne(s) · part entreprise <span class="mono font-medium text-zinc-50" id="saves-customs-total">$0.00</span></p>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-md border border-zinc-800">
+        <div class="overflow-auto max-h-[500px]">
+          <table class="shadcn-table">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>Date</th>
+                <th>Vendeur</th>
+                <th>Client</th>
+                <th>Arme</th>
+                <th class="text-right">Coût</th>
+                <th class="text-right">Prix final</th>
+                <th class="text-right">Part entreprise</th>
+              </tr>
+            </thead>
+            <tbody id="saves-customs-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Occasions -->
+    <div class="shadcn-card p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold tracking-tight">Armes d'occasion vendues</h3>
+          <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="saves-occas-count">0</span> ligne(s) · marge totale <span class="mono font-medium text-zinc-50" id="saves-occas-total">$0.00</span></p>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-md border border-zinc-800">
+        <div class="overflow-auto max-h-[500px]">
+          <table class="shadcn-table">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>Date</th>
+                <th>Armurier</th>
+                <th>Client (rachat)</th>
+                <th>Client (revente)</th>
+                <th>Arme</th>
+                <th>N° série</th>
+                <th class="text-right">Prix reprise</th>
+                <th class="text-right">Prix revente</th>
+              </tr>
+            </thead>
+            <tbody id="saves-occas-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ============================================================
@@ -902,6 +1049,7 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
       btn.setAttribute("data-state", "active");
       document.getElementById(btn.dataset.tab).classList.remove('hidden');
+      if (btn.dataset.tab === "saves") loadSaves();
     });
   });
 

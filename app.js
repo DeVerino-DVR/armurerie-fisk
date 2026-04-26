@@ -191,6 +191,7 @@ function loadData() {
           if (ADMIN_ROLES.includes(e.statut) && !e.pin) e.pin = DEFAULT_ADMIN_PIN;
         });
       }
+      if (!Array.isArray(parsed.armesPerso)) parsed.armesPerso = [];
       return parsed;
     } catch(e) {}
   }
@@ -201,6 +202,7 @@ function loadData() {
     depDed: [],
     depNonDed: [],
     employes: [...EMPLOYES_DEFAULT],
+    armesPerso: [],
     impots: { semaine: "", du: "", au: "", capital: 0 },
     inventory: emptyInventory()
   };
@@ -263,6 +265,7 @@ async function loadStateFromWorker() {
     data = { ...data, ...rest };
     if (!data.inventory) data.inventory = emptyInventory();
     MATERIALS.forEach(m => { if (!(m.id in data.inventory)) data.inventory[m.id] = 0; });
+    if (!Array.isArray(data.armesPerso)) data.armesPerso = [];
     lastRemoteVersion = meta?.version || 0;
     saveDataLocalOnly();
     refreshAll();
@@ -1257,9 +1260,11 @@ function refreshImpots() {
   const totalSal = data.employes.reduce((acc,e) => acc + (Number(e.salaire)||0) + (Number(e.prime)||0), 0);
   document.getElementById("sal-total").textContent = fmt(totalSal);
 
+  // Revenus déclarés à l'État :
+  //   - 100% du CA des ventes (les armes d'occas vendues y sont déjà incluses via addVente)
+  //   - uniquement les 25% (part entreprise) des customs ; le coût matières revient au client
   const revenus = data.ventes.reduce((s,v)=>s+(v.final||0),0)
-                + data.customs.reduce((s,c)=>s+(c.final||0),0)
-                + data.occas.filter(o=>o.vendue).reduce((s,o)=>s+(o.prixRevente||0),0);
+                + data.customs.reduce((s,c)=>s+(c.part||0),0);
   const capital = Number(data.impots.capital)||0;
   const imposable = Math.max(0, revenus - totalSal - totalDD);
   const impots = imposable * 0.5;
@@ -1277,6 +1282,7 @@ function refreshImpots() {
   document.getElementById("r-dep-nonded").textContent = neg(totalDND);
   document.getElementById("r-bilan").textContent = fmt(bilan);
   document.getElementById("r-capital-fin").textContent = fmt(capitalFin);
+  refreshCommissions();
   applyAdminLock();
 }
 
@@ -1318,6 +1324,7 @@ function refreshVendeurSelects() {
   fillSelect(document.getElementById("v-vendeur"), employesList(), "-- Vendeur --");
   fillSelect(document.getElementById("c-vendeur"), employesList(), "-- Vendeur --");
   fillSelect(document.getElementById("o-vendeur"), employesList(), "-- Armurier --");
+  refreshArmePersoSelect();
 }
 
 let editingEmpIdx = -1;
@@ -1504,13 +1511,11 @@ async function testGithubConnection() {
 
 function buildBilanMarkdown(weekDate) {
   const totalVentes = data.ventes.reduce((s,v) => s + (v.final||0), 0);
-  const totalCustomsFinal = data.customs.reduce((s,c) => s + (c.final||0), 0);
   const totalCustomsPart = data.customs.reduce((s,c) => s + (c.part||0), 0);
-  const totalOccasVendues = data.occas.filter(o => o.vendue).reduce((s,o) => s + (o.prixRevente||0), 0);
   const totalSal = data.employes.reduce((s,e) => s + (Number(e.salaire)||0) + (Number(e.prime)||0), 0);
   const totalDD = data.depDed.reduce((s,d) => s + (d.mnt||0), 0);
   const totalDND = data.depNonDed.reduce((s,d) => s + (d.mnt||0), 0);
-  const revenus = totalVentes + totalCustomsFinal + totalOccasVendues;
+  const revenus = totalVentes + totalCustomsPart;
   const imposable = Math.max(0, revenus - totalSal - totalDD);
   const impots = imposable * 0.5;
   const bilan = revenus - totalSal - totalDD - impots - totalDND;
@@ -1526,10 +1531,9 @@ function buildBilanMarkdown(weekDate) {
 
 | Poste | Montant |
 |---|---:|
-| Revenus totaux (ventes + customs + occas) | ${f(revenus)} |
-| — dont ventes d'armes | ${f(totalVentes)} |
-| — dont customs | ${f(totalCustomsFinal)} (part entreprise : ${f(totalCustomsPart)}) |
-| — dont armes d'occas vendues | ${f(totalOccasVendues)} |
+| Revenus déclarés (ventes + 25% customs) | ${f(revenus)} |
+| — dont ventes d'armes (occas vendues incluses) | ${f(totalVentes)} |
+| — dont part entreprise sur customs (25%) | ${f(totalCustomsPart)} |
 | Salaires | -${f(totalSal)} |
 | Dépenses déductibles | -${f(totalDD)} |
 | **Montant imposable** | **${f(imposable)}** |
@@ -1778,14 +1782,148 @@ function invSet(item) {
   refreshInventory();
 }
 
+// ============================================================
+// COMMISSIONS
+// ============================================================
+const FIREARM_CATEGORIES = ["Revolvers", "Pistolets", "Pompes / Fusils de chasse", "Carabines", "Fusil"];
+const COMMISSION_FIREARM = 2;
+const COMMISSION_OTHER = 0.30;
+
+function buildArmeCategoryMap() {
+  const map = {};
+  for (const [cat, items] of Object.entries(CATALOGUE)) {
+    for (const nom of Object.keys(items)) map[nom] = cat;
+  }
+  return map;
+}
+
+function computeCommissions() {
+  const map = buildArmeCategoryMap();
+  const result = new Map();
+  const ensure = (name) => {
+    if (!result.has(name)) result.set(name, { name, statut: "", armes: 0, autres: 0, customs: 0, total: 0 });
+    return result.get(name);
+  };
+  data.employes.forEach(e => {
+    const r = ensure(`${e.prenom} ${e.nom}`);
+    r.statut = e.statut;
+  });
+  for (const v of data.ventes) {
+    if (!v.vendeur) continue;
+    const r = ensure(v.vendeur);
+    const cat = map[v.arme];
+    if (cat && FIREARM_CATEGORIES.includes(cat)) {
+      r.armes += 1;
+      r.total += COMMISSION_FIREARM;
+    } else {
+      r.autres += 1;
+      r.total += COMMISSION_OTHER;
+    }
+  }
+  for (const c of data.customs) {
+    if (!c.vendeur) continue;
+    const r = ensure(c.vendeur);
+    r.customs += 1;
+    r.total += COMMISSION_OTHER;
+  }
+  return Array.from(result.values());
+}
+
+function refreshCommissions() {
+  const tbody = document.getElementById("com-table");
+  if (!tbody) return;
+  const rows = computeCommissions();
+  rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td class="text-zinc-400">${i + 1}</td>
+      <td class="font-medium">${escAttr(r.name)}${r.statut ? "" : ' <span class="badge badge-muted text-xs">ex-employé</span>'}</td>
+      <td class="text-right mono">${r.armes}</td>
+      <td class="text-right mono">${r.autres}</td>
+      <td class="text-right mono">${r.customs}</td>
+      <td class="text-right mono"><b>${fmt(r.total)}</b></td>
+    </tr>
+  `).join("");
+  const total = rows.reduce((s, r) => s + r.total, 0);
+  const totalEl = document.getElementById("com-total");
+  if (totalEl) totalEl.textContent = fmt(total);
+}
+
+// ============================================================
+// ARMES PERSO
+// ============================================================
+function refreshArmePersoSelect() {
+  const sel = document.getElementById("ap-employe");
+  if (!sel) return;
+  const current = sel.value;
+  const list = employesList();
+  sel.innerHTML = `<option value="">-- Employé --</option>` +
+    list.map(n => `<option value="${escAttr(n)}">${escAttr(n)}</option>`).join("");
+  if (current && list.includes(current)) sel.value = current;
+}
+
+function addArmePerso() {
+  const employe = document.getElementById("ap-employe").value;
+  const arme = document.getElementById("ap-arme").value.trim();
+  const serie = document.getElementById("ap-serie").value.trim();
+  if (!employe) { alert("Choisissez un employé"); return; }
+  if (!arme) { alert("Renseignez le nom de l'arme"); return; }
+  data.armesPerso.push({
+    id: Date.now(),
+    date: today(),
+    employe,
+    arme,
+    serie
+  });
+  saveData();
+  document.getElementById("ap-arme").value = "";
+  document.getElementById("ap-serie").value = "";
+  refreshArmesPerso();
+  toast("Arme déclarée", `${arme} ajoutée pour ${employe}.`, "success", 2500);
+}
+
+function delArmePerso(id) {
+  if (!confirm("Supprimer cette arme personnelle ?")) return;
+  data.armesPerso = data.armesPerso.filter(a => a.id !== id);
+  saveData();
+  refreshArmesPerso();
+}
+
+function refreshArmesPerso() {
+  refreshArmePersoSelect();
+  const tbody = document.getElementById("ap-table");
+  if (!tbody) return;
+  const search = (document.getElementById("ap-search")?.value || "").toLowerCase();
+  const list = (data.armesPerso || []).filter(a =>
+    !search ||
+    (a.employe || "").toLowerCase().includes(search) ||
+    (a.arme || "").toLowerCase().includes(search) ||
+    (a.serie || "").toLowerCase().includes(search)
+  ).sort((a, b) => (a.employe || "").localeCompare(b.employe || "") || (a.arme || "").localeCompare(b.arme || ""));
+  tbody.innerHTML = list.map(a => `
+    <tr>
+      <td class="font-medium">${escAttr(a.employe || "")}</td>
+      <td>${escAttr(a.arme || "")}</td>
+      <td class="mono">${escAttr(a.serie || "")}</td>
+      <td class="actions-cell">
+        <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delArmePerso(${a.id})" title="Supprimer">✕</button>
+      </td>
+    </tr>
+  `).join("");
+  const countEl = document.getElementById("ap-count");
+  if (countEl) countEl.textContent = String((data.armesPerso || []).length);
+}
+
 function refreshAll() {
   refreshVentes();
   refreshCustoms();
   refreshOccas();
   refreshOccasStockSelect();
   refreshImpots();
+  refreshCommissions();
   refreshEmp();
   refreshInventory();
+  refreshArmesPerso();
   renderPrix();
 }
 
@@ -1819,6 +1957,7 @@ document.addEventListener("change", e => {
 document.getElementById("v-search").addEventListener("input", refreshVentes);
 document.getElementById("c-search").addEventListener("input", refreshCustoms);
 document.getElementById("o-hide-sold").addEventListener("change", refreshOccas);
+document.getElementById("ap-search").addEventListener("input", refreshArmesPerso);
 
 // ============================================================
 // BOOT

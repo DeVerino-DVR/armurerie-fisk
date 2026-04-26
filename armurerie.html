@@ -72,6 +72,8 @@
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="prix">Prix armes à feu</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="armes-perso">Armes perso</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="impots">Impôts / Bilan</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="params">Paramètres</button>
@@ -430,6 +432,62 @@
 </section>
 
 <!-- ============================================================
+     ARMES PERSO
+     ============================================================ -->
+<section id="armes-perso" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-5">
+      <h2 class="text-xl font-semibold tracking-tight">Déclarer une arme personnelle</h2>
+      <p class="text-sm text-zinc-400 mt-1">Permet à chaque employé d'enregistrer ses armes personnelles avec leur numéro de série.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div>
+        <label class="shadcn-label">Employé</label>
+        <select id="ap-employe" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Nom de l'arme</label>
+        <input type="text" id="ap-arme" class="shadcn-input" placeholder="Ex: Cattleman, LeMat...">
+      </div>
+      <div>
+        <label class="shadcn-label">Numéro de série</label>
+        <input type="text" id="ap-serie" class="shadcn-input" placeholder="N° de série">
+      </div>
+      <div class="flex items-end">
+        <button class="shadcn-btn shadcn-btn-primary w-full" onclick="addArmePerso()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6">
+    <div class="flex items-start justify-between mb-5 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Armes personnelles déclarées</h2>
+        <p class="text-sm text-zinc-400 mt-1">Total : <span class="mono font-medium text-zinc-50" id="ap-count">0</span></p>
+      </div>
+      <input type="text" id="ap-search" class="shadcn-input" placeholder="Rechercher par employé, arme, série..." style="max-width:320px">
+    </div>
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <table class="shadcn-table">
+        <thead>
+          <tr>
+            <th>Employé</th>
+            <th>Arme</th>
+            <th>Numéro de série</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ap-table"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
      IMPOTS (page gardée comme la fiche originale)
      ============================================================ -->
 <section id="impots" class="tab-content hidden">
@@ -478,53 +536,24 @@
       </div>
     </div>
 
-    <!-- Dépenses déductibles -->
+    <!-- Commissions -->
     <div class="shadcn-card p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold tracking-tight">Dépenses déductibles</h3>
-          <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="dep-ded-total">$0.00</span></p>
-        </div>
-      </div>
-      <div class="space-y-3 mb-4">
-        <input type="date" id="dd-date" class="shadcn-input">
-        <select id="dd-lib" class="shadcn-input">
-          <option value="">-- Choisir un libellé --</option>
-          <optgroup label="Matières premières (ajoutées au stock)">
-            <option>Minerai de fer</option>
-            <option>Lingot de fer</option>
-            <option>Lingot de cuivre</option>
-            <option>Lingot d'or</option>
-            <option>Planche</option>
-            <option>Petite pièce de cuir</option>
-            <option>Grosse pièce de cuir</option>
-            <option>Chiffon</option>
-            <option>Linge de coton</option>
-            <option>Charbon</option>
-            <option>Sac de charbon</option>
-          </optgroup>
-          <optgroup label="Autres dépenses">
-            <option>Roche</option>
-            <option>Huile d'arme</option>
-            <option>Arcs + carquois</option>
-            <option>Cigarettes</option>
-            <option>Laine</option>
-            <option>Nourritures</option>
-          </optgroup>
-        </select>
-        <div class="flex gap-2">
-          <input type="number" id="dd-qte" class="shadcn-input" placeholder="Quantité" step="1" style="max-width:120px">
-          <input type="number" id="dd-mnt" class="shadcn-input flex-1" placeholder="Montant" step="0.01">
-          <button class="shadcn-btn shadcn-btn-primary shadcn-btn-icon" onclick="addDepDed()" title="Ajouter">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-          </button>
+          <h3 class="text-lg font-semibold tracking-tight">Commissions</h3>
+          <p class="text-sm text-zinc-400 mt-0.5">
+            Total : <span class="mono font-medium text-zinc-50" id="com-total">$0.00</span>
+            <span class="text-xs text-zinc-500 ml-1">· $2 / arme à feu · $0.30 / custom, munitions, armes blanches</span>
+          </p>
         </div>
       </div>
       <div class="overflow-hidden rounded-md border border-zinc-800">
-        <div class="overflow-auto max-h-64">
+        <div class="overflow-auto max-h-[500px]">
           <table class="shadcn-table">
-            <thead><tr><th>Date</th><th>Libellé</th><th>Qté</th><th class="text-right">Montant</th><th></th></tr></thead>
-            <tbody id="dd-table"></tbody>
+            <thead>
+              <tr><th>#</th><th>Employé</th><th class="text-right">Armes à feu</th><th class="text-right">Autres</th><th class="text-right">Customs</th><th class="text-right">Total</th></tr>
+            </thead>
+            <tbody id="com-table"></tbody>
           </table>
         </div>
       </div>
@@ -547,6 +576,58 @@
             <tbody id="sal-table"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dépenses déductibles -->
+  <div class="shadcn-card p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-lg font-semibold tracking-tight">Dépenses déductibles</h3>
+        <p class="text-sm text-zinc-400 mt-0.5">Total : <span class="mono font-medium text-zinc-50" id="dep-ded-total">$0.00</span></p>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+      <input type="date" id="dd-date" class="shadcn-input">
+      <select id="dd-lib" class="shadcn-input sm:col-span-2">
+        <option value="">-- Choisir un libellé --</option>
+        <optgroup label="Matières premières (ajoutées au stock)">
+          <option>Minerai de fer</option>
+          <option>Lingot de fer</option>
+          <option>Lingot de cuivre</option>
+          <option>Lingot d'or</option>
+          <option>Planche</option>
+          <option>Petite pièce de cuir</option>
+          <option>Grosse pièce de cuir</option>
+          <option>Chiffon</option>
+          <option>Linge de coton</option>
+          <option>Charbon</option>
+          <option>Sac de charbon</option>
+        </optgroup>
+        <optgroup label="Autres dépenses">
+          <option>Roche</option>
+          <option>Huile d'arme</option>
+          <option>Arcs + carquois</option>
+          <option>Cigarettes</option>
+          <option>Laine</option>
+          <option>Nourritures</option>
+        </optgroup>
+      </select>
+      <div class="flex gap-2">
+        <input type="number" id="dd-qte" class="shadcn-input" placeholder="Qté" step="1" style="max-width:90px">
+        <input type="number" id="dd-mnt" class="shadcn-input flex-1" placeholder="Montant" step="0.01">
+        <button class="shadcn-btn shadcn-btn-primary shadcn-btn-icon" onclick="addDepDed()" title="Ajouter">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="overflow-hidden rounded-md border border-zinc-800">
+      <div class="overflow-auto max-h-64">
+        <table class="shadcn-table">
+          <thead><tr><th>Date</th><th>Libellé</th><th>Qté</th><th class="text-right">Montant</th><th></th></tr></thead>
+          <tbody id="dd-table"></tbody>
+        </table>
       </div>
     </div>
   </div>

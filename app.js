@@ -1325,6 +1325,52 @@ function declarerImpots() {
 }
 
 // ============================================================
+// CLOTURE SEMAINE — reset compta après déclaration impôts
+// ============================================================
+function cloturerSemaine() {
+  if (!requireAdmin()) return;
+
+  const parseAmount = id => Number(document.getElementById(id).textContent.replace(/[^0-9.-]/g, "")) || 0;
+  const capitalFin = parseAmount("r-capital-fin");
+  const occasInStock = data.occas.filter(o => !o.vendue).length;
+  const occasVendues = data.occas.filter(o => o.vendue).length;
+
+  const msg =
+    "⚠️ Clôturer la semaine ?\n\n" +
+    "Cette action vide la compta pour démarrer la nouvelle semaine. Vérifie d'abord que tu as bien :\n" +
+    "  • cliqué sur « Sauvegarder la semaine » (Paramètres)\n" +
+    "  • envoyé la déclaration sur le Google Form\n\n" +
+    "Ce qui sera RESET :\n" +
+    `  • ${data.ventes.length} vente(s)\n` +
+    `  • ${data.customs.length} custom(s)\n` +
+    `  • ${occasVendues} arme(s) d'occasion vendue(s) supprimée(s) (${occasInStock} en stock conservée(s))\n` +
+    `  • ${data.depDed.length} dépense(s) déductible(s)\n` +
+    `  • ${data.depNonDed.length} dépense(s) non déductible(s)\n` +
+    "  • Salaires, primes et heures de tous les employés remis à 0\n\n" +
+    `Le capital de début de la nouvelle semaine sera : $${capitalFin.toFixed(2)} (capital de fin actuel).\n\n` +
+    "Cette action est IRRÉVERSIBLE en local. Continuer ?";
+
+  if (!confirm(msg)) return;
+
+  data.ventes = [];
+  data.customs = [];
+  data.occas = data.occas.filter(o => !o.vendue);
+  data.depDed = [];
+  data.depNonDed = [];
+  data.employes.forEach(e => { e.salaire = 0; e.prime = 0; e.heures = 0; });
+
+  const wk = currentWeekRange();
+  data.impots.semaine = wk.semaine;
+  data.impots.du = wk.du;
+  data.impots.au = wk.au;
+  data.impots.capital = capitalFin;
+
+  saveData();
+  refreshAll();
+  toast("Semaine clôturée", `Nouvelle semaine ${wk.semaine} démarrée. Capital de départ : $${capitalFin.toFixed(2)}.`, "success", 6000);
+}
+
+// ============================================================
 // SAVES — historique des semaines archivées sur GitHub
 // ============================================================
 const SAVES_GH_OWNER  = "DeVerino-DVR";

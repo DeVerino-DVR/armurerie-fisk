@@ -36,11 +36,11 @@ const CATALOGUE = {
     "Fusil Express": 11, "Fusil Véloce": 8, "Fusil Tête creuse": 8,
     "Pistolet Express": 8, "Pistolet Véloce": 5, "Pistolet Tête creuse": 5,
     "Munition éléphant": 50, "Pompe Slug": 10,
-    "Carquois empoisonné": 3, "Carquois petit gibier": 2
+    "Carquois empoisonné": 3, "Carquois petit gibier": 3
   },
   "Divers": {
     "Huile pour arme": 2, "Nettoyage arme": 1.5,
-    "Jumelles": 3, "Carquois": 2, "Changement de nom": 2.5
+    "Jumelles": 3, "Carquois": 3, "Changement de nom": 2.5
   }
 };
 

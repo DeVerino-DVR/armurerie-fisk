@@ -604,6 +604,7 @@ function initUI() {
   fillSelect(document.getElementById("v-arme"), armesVenteOptions(), "-- Choisir une arme --");
   fillSelect(document.getElementById("v-arme-occas"), armesOccasStockOptions(), "-- Arme d'occasion --");
   fillSelect(document.getElementById("o-arme"), [{group:"Armes reprises", items: armesOccasOptions()}], "-- Choisir une arme --");
+  fillSelect(document.getElementById("dv-produit"), devisProduitOptions(), "-- Choisir un produit --");
 
   const wk = currentWeekRange();
   document.getElementById("i-semaine").value = wk.semaine;
@@ -2254,6 +2255,89 @@ function renderPrix() {
   }).join("");
 }
 
+// ============================================================
+// DEVIS — table multi-produits avec réduction globale (UI-only, non persisté)
+// ============================================================
+let devisLignes = [];
+
+function devisProduitOptions() {
+  const opts = [];
+  for (const [cat, armes] of Object.entries(CATALOGUE)) {
+    opts.push({
+      group: cat,
+      items: Object.entries(armes).map(([nom, prix]) => ({
+        value: JSON.stringify({ nom, prix, cat }),
+        label: `${nom} — ${fmt(prix)}`
+      }))
+    });
+  }
+  return opts;
+}
+
+function addDevisLigne() {
+  const sel = document.getElementById("dv-produit");
+  const raw = sel?.value;
+  if (!raw) { alert("Choisis un produit"); return; }
+  const qte = Math.max(1, Number(document.getElementById("dv-qte").value) || 1);
+  const { nom, prix, cat } = JSON.parse(raw);
+  devisLignes.push({ id: Date.now() + Math.random(), nom, prix, qte, cat });
+  document.getElementById("dv-produit").value = "";
+  document.getElementById("dv-qte").value = "1";
+  refreshDevis();
+}
+
+function delDevisLigne(id) {
+  devisLignes = devisLignes.filter(l => l.id !== id);
+  refreshDevis();
+}
+
+function updateDevisLigneQte(id, val) {
+  const l = devisLignes.find(x => x.id === id);
+  if (!l) return;
+  l.qte = Math.max(1, Number(val) || 1);
+  refreshDevis();
+}
+
+function clearDevis() {
+  if (!devisLignes.length) {
+    document.getElementById("dv-reduc").value = "0";
+    refreshDevis();
+    return;
+  }
+  if (!confirm("Vider le devis ?")) return;
+  devisLignes = [];
+  document.getElementById("dv-reduc").value = "0";
+  refreshDevis();
+}
+
+function refreshDevis() {
+  const tbody = document.getElementById("dv-table");
+  if (!tbody) return;
+  if (!devisLignes.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-zinc-500" style="padding:24px">Aucune ligne — ajoute un produit ci-dessus.</td></tr>`;
+  } else {
+    tbody.innerHTML = devisLignes.map((l, i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${escAttr(l.nom)} <span class="text-xs text-zinc-500">· ${escAttr(l.cat)}</span></td>
+        <td class="text-right"><input type="number" min="1" value="${l.qte}" onchange="updateDevisLigneQte(${l.id}, this.value)" style="width:70px"></td>
+        <td class="text-right mono">${fmt(l.prix)}</td>
+        <td class="text-right mono">${fmt(l.prix * l.qte)}</td>
+        <td><button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delDevisLigne(${l.id})" title="Supprimer">✕</button></td>
+      </tr>
+    `).join("");
+  }
+  document.getElementById("dv-count").textContent = devisLignes.length;
+  const sousTotal = devisLignes.reduce((s, l) => s + l.prix * l.qte, 0);
+  let reduc = Number(document.getElementById("dv-reduc")?.value) || 0;
+  reduc = Math.min(100, Math.max(0, reduc));
+  const reducMnt = sousTotal * (reduc / 100);
+  const total = sousTotal - reducMnt;
+  document.getElementById("dv-sous-total").textContent = fmt(sousTotal);
+  document.getElementById("dv-reduc-mnt").textContent = "-" + fmt(reducMnt);
+  document.getElementById("dv-total").textContent = fmt(total);
+}
+
 function refreshInventory() {
   const tbody = document.getElementById("inv-table");
   if (!tbody) return;
@@ -2469,6 +2553,7 @@ function refreshAll() {
   refreshPartenaires();
   refreshImpotsHistory();
   refreshCart();
+  refreshDevis();
   renderPrix();
 }
 
@@ -2711,6 +2796,7 @@ document.addEventListener("input", e => {
   if (["v-arme","v-arme-occas","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
   if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
+  if (e.target.id === "dv-reduc") refreshDevis();
   if (["i-semaine","i-du","i-au","i-capital","i-taux-local"].includes(e.target.id)) {
     data.impots.semaine = document.getElementById("i-semaine").value;
     data.impots.du = document.getElementById("i-du").value;

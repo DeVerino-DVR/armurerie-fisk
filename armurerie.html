@@ -68,6 +68,8 @@
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="occas">Armes d'occas</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="devis">Devis</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="inventaire">Inventaire</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="prix">Prix armes à feu</button>
@@ -428,6 +430,60 @@
           </thead>
           <tbody id="o-table"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     DEVIS — table multi-produits avec réduction globale
+     ============================================================ -->
+<section id="devis" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="mb-4">
+      <h2 class="text-xl font-semibold tracking-tight">Nouveau devis</h2>
+      <p class="text-sm text-zinc-400 mt-1">Construis un devis client en empilant des produits du catalogue (armes, munitions, divers) puis applique une réduction globale en bas du tableau.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-6 gap-3">
+      <div class="sm:col-span-4">
+        <label class="shadcn-label">Produit</label>
+        <select id="dv-produit" class="shadcn-input"></select>
+      </div>
+      <div>
+        <label class="shadcn-label">Quantité</label>
+        <input type="number" id="dv-qte" min="1" value="1" class="shadcn-input">
+      </div>
+      <div class="flex items-end">
+        <button class="shadcn-btn shadcn-btn-primary w-full" onclick="addDevisLigne()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="shadcn-card p-6">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div>
+        <h3 class="text-lg font-semibold tracking-tight">Lignes du devis</h3>
+        <p class="text-sm text-zinc-400 mt-0.5"><span id="dv-count">0</span> ligne(s)</p>
+      </div>
+      <button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm" onclick="clearDevis()">Vider le devis</button>
+    </div>
+    <div class="overflow-hidden rounded-md border border-zinc-800 mb-5">
+      <table class="shadcn-table">
+        <thead><tr><th>#</th><th>Produit</th><th class="text-right">Qté</th><th class="text-right">Prix unit.</th><th class="text-right">Total ligne</th><th></th></tr></thead>
+        <tbody id="dv-table"></tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div></div>
+      <div class="space-y-1">
+        <div class="recap-row"><span class="text-zinc-400">Sous-total</span><span class="recap-value mono" id="dv-sous-total">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400 inline-flex items-center gap-2">Réduction globale (<input type="number" id="dv-reduc" min="0" max="100" step="0.5" value="0" class="shadcn-input mono" style="width:60px;height:24px;padding:0 6px;font-size:12px">%)</span><span class="recap-value mono text-red-400" id="dv-reduc-mnt">-$0.00</span></div>
+        <div class="recap-row final"><span>Total à payer</span><span class="recap-value mono" id="dv-total">$0.00</span></div>
       </div>
     </div>
   </div>

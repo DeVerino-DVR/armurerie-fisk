@@ -439,8 +439,9 @@ function armesOccasOptions() {
 }
 
 function armesOccasStockOptions() {
+  const inCart = new Set(venteCart.filter(it => it.occasId).map(it => it.occasId));
   return data.occas
-    .filter(o => !o.vendue)
+    .filter(o => !o.vendue && !inCart.has(o.id))
     .sort((a,b) => (a.arme||"").localeCompare(b.arme||""))
     .map(o => ({
       value: String(o.id),
@@ -664,77 +665,147 @@ function applyRecipe(nom, qte, sign) {
   });
 }
 
-function addVente() {
+// Panier en cours (multi-ventes pour un même client) — état UI uniquement, non persisté.
+let venteCart = [];
+
+function readCurrentVenteLine() {
   const selArme = document.getElementById("v-arme").value;
   const selOccas = document.getElementById("v-arme-occas").value;
-  const vendeur = document.getElementById("v-vendeur").value;
-  if (!selArme && !selOccas) { alert("Choisissez une arme"); return; }
-  if (!vendeur) { alert("Choisissez un vendeur"); return; }
-
+  if (!selArme && !selOccas) return null;
+  const serie = document.getElementById("v-serie").value;
   if (selOccas) {
     const o = data.occas.find(x => String(x.id) === selOccas);
-    if (!o) { alert("Arme d'occasion introuvable"); return; }
-    if (o.vendue) { alert("Cette arme d'occasion est déjà vendue"); return; }
+    if (!o) { alert("Arme d'occasion introuvable"); return null; }
+    if (o.vendue) { alert("Cette arme d'occasion est déjà vendue"); return null; }
+    if (venteCart.some(it => it.occasId === o.id)) { alert("Cette arme d'occasion est déjà dans le panier"); return null; }
     const prix = Number(o.prixRevente) || 0;
-    data.ventes.push({
-      id: Date.now(),
-      date: today(),
-      vendeur,
-      client: document.getElementById("v-client").value,
-      serie: o.serie || document.getElementById("v-serie").value,
-      arme: o.arme,
-      qte: 1,
-      prix,
-      reduc: 0,
-      final: prix,
-      occasId: o.id
-    });
-    o.vendue = true;
-    saveData();
-    document.getElementById("v-date").value = today();
-    document.getElementById("v-client").value = "";
-    document.getElementById("v-serie").value = "";
-    document.getElementById("v-qte").value = "1";
-    document.getElementById("v-reduc").value = "0";
-    document.getElementById("v-arme-occas").value = "";
-    document.getElementById("v-prix-cat").value = "";
-    document.getElementById("v-prix-final").value = "";
-    document.getElementById("v-partenaire").value = "";
-    refreshOccasStockSelect();
-    refreshVentes();
-    refreshOccas();
-    refreshImpots();
-    return;
+    return { arme: o.arme, occasId: o.id, serie: o.serie || serie, qte: 1, prix, reduc: 0, final: prix };
   }
-
   const {nom, prix} = JSON.parse(selArme);
   const qte = Number(document.getElementById("v-qte").value) || 1;
   const reduc = Number(document.getElementById("v-reduc").value) || 0;
   const brut = prix * qte;
   const final = brut * (1 - reduc/100);
-  data.ventes.push({
-    id: Date.now(),
-    date: today(),
-    vendeur,
-    client: document.getElementById("v-client").value,
-    serie: document.getElementById("v-serie").value,
-    arme: nom,
-    qte,
-    prix: brut,
-    reduc,
-    final
-  });
-  applyRecipe(nom, qte, -1);
-  saveData();
-  document.getElementById("v-date").value = today();
-  document.getElementById("v-client").value = "";
+  return { arme: nom, serie, qte, prix: brut, reduc, final };
+}
+
+function clearVenteArmeFields() {
+  document.getElementById("v-arme").value = "";
+  document.getElementById("v-arme-occas").value = "";
   document.getElementById("v-serie").value = "";
   document.getElementById("v-qte").value = "1";
   document.getElementById("v-reduc").value = "0";
+  document.getElementById("v-prix-cat").value = "";
+  document.getElementById("v-prix-final").value = "";
+}
+
+function addToCart() {
+  const item = readCurrentVenteLine();
+  if (!item) {
+    if (!document.getElementById("v-arme").value && !document.getElementById("v-arme-occas").value) {
+      alert("Choisissez une arme avant d'ajouter au panier");
+    }
+    return;
+  }
+  venteCart.push(item);
+  clearVenteArmeFields();
+  refreshOccasStockSelect();
+  refreshCart();
+}
+
+function removeFromCart(idx) {
+  venteCart.splice(idx, 1);
+  refreshOccasStockSelect();
+  refreshCart();
+}
+
+function clearCart() {
+  if (!venteCart.length) return;
+  if (!confirm("Vider le panier ?")) return;
+  venteCart = [];
+  refreshOccasStockSelect();
+  refreshCart();
+}
+
+function refreshCart() {
+  const card = document.getElementById("v-cart-card");
+  const tbody = document.getElementById("v-cart-table");
+  const totalEl = document.getElementById("v-cart-total");
+  const submitLabel = document.getElementById("v-submit-label");
+  if (!card) return;
+  if (!venteCart.length) {
+    card.classList.add("hidden");
+    if (submitLabel) submitLabel.textContent = "Enregistrer la vente";
+    return;
+  }
+  card.classList.remove("hidden");
+  tbody.innerHTML = venteCart.map((it, i) => `
+    <tr>
+      <td>${i+1}</td>
+      <td>${escAttr(it.arme)}${it.occasId ? ' <span class="badge badge-muted ml-1">occas</span>' : ''}</td>
+      <td class="mono">${escAttr(it.serie || '—')}</td>
+      <td class="text-right">${it.qte}</td>
+      <td class="text-right">${it.reduc}%</td>
+      <td class="text-right mono">${fmt(it.final)}</td>
+      <td><button class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="removeFromCart(${i})" title="Retirer du panier">✕</button></td>
+    </tr>
+  `).join("");
+  const total = venteCart.reduce((s, it) => s + (it.final || 0), 0);
+  totalEl.textContent = fmt(total);
+  if (submitLabel) submitLabel.textContent = `Enregistrer la vente (${venteCart.length} ligne${venteCart.length > 1 ? 's' : ''})`;
+}
+
+function addVente() {
+  const vendeur = document.getElementById("v-vendeur").value;
+  if (!vendeur) { alert("Choisissez un vendeur"); return; }
+  const client = document.getElementById("v-client").value;
+
+  const items = [...venteCart];
+  const selArme = document.getElementById("v-arme").value;
+  const selOccas = document.getElementById("v-arme-occas").value;
+  if (selArme || selOccas) {
+    const cur = readCurrentVenteLine();
+    if (!cur) return;
+    items.push(cur);
+  }
+  if (!items.length) { alert("Choisissez une arme (ou ajoute-en au panier)"); return; }
+
+  const now = Date.now();
+  items.forEach((it, idx) => {
+    const v = {
+      id: now + idx,
+      date: today(),
+      vendeur,
+      client,
+      serie: it.serie || "",
+      arme: it.arme,
+      qte: it.qte,
+      prix: it.prix,
+      reduc: it.reduc,
+      final: it.final
+    };
+    if (it.occasId) {
+      v.occasId = it.occasId;
+      const o = data.occas.find(x => x.id === it.occasId);
+      if (o) o.vendue = true;
+    } else {
+      applyRecipe(it.arme, it.qte, -1);
+    }
+    data.ventes.push(v);
+  });
+
+  venteCart = [];
+  saveData();
+  document.getElementById("v-date").value = today();
+  document.getElementById("v-client").value = "";
   document.getElementById("v-partenaire").value = "";
+  clearVenteArmeFields();
+  refreshOccasStockSelect();
   refreshVentes();
+  refreshOccas();
   refreshImpots();
   refreshInventory();
+  refreshCart();
 }
 
 let editingVenteId = null;
@@ -2397,6 +2468,7 @@ function refreshAll() {
   refreshArmesPerso();
   refreshPartenaires();
   refreshImpotsHistory();
+  refreshCart();
   renderPrix();
 }
 

@@ -209,6 +209,7 @@ function loadData() {
       }
       if (!Array.isArray(parsed.armesPerso)) parsed.armesPerso = [];
       if (!Array.isArray(parsed.partenaires)) parsed.partenaires = [];
+      if (!Array.isArray(parsed.impotsHistory)) parsed.impotsHistory = [];
       return parsed;
     } catch(e) {}
   }
@@ -221,7 +222,8 @@ function loadData() {
     employes: [...EMPLOYES_DEFAULT],
     armesPerso: [],
     partenaires: [],
-    impots: { semaine: "", du: "", au: "", capital: 0 },
+    impots: { semaine: "", du: "", au: "", capital: 0, tauxLocal: 15 },
+    impotsHistory: [],
     inventory: emptyInventory()
   };
 }
@@ -284,6 +286,7 @@ async function loadStateFromWorker() {
     if (!data.inventory) data.inventory = emptyInventory();
     MATERIALS.forEach(m => { if (!(m.id in data.inventory)) data.inventory[m.id] = 0; });
     if (!Array.isArray(data.armesPerso)) data.armesPerso = [];
+    if (!Array.isArray(data.impotsHistory)) data.impotsHistory = [];
     lastRemoteVersion = meta?.version || 0;
     saveDataLocalOnly();
     refreshAll();
@@ -609,6 +612,8 @@ function initUI() {
   data.impots.du = wk.du;
   data.impots.au = wk.au;
   document.getElementById("i-capital").value = data.impots.capital || 0;
+  if (data.impots.tauxLocal == null) data.impots.tauxLocal = 15;
+  document.getElementById("i-taux-local").value = data.impots.tauxLocal;
 
   initGithubUI();
   refreshAll();
@@ -1181,6 +1186,8 @@ function saveImpots() {
   data.impots.du = document.getElementById("i-du").value;
   data.impots.au = document.getElementById("i-au").value;
   data.impots.capital = Number(document.getElementById("i-capital").value) || 0;
+  const tx = Number(document.getElementById("i-taux-local").value);
+  data.impots.tauxLocal = isFinite(tx) ? Math.min(20, Math.max(0, tx)) : 0;
   saveData();
   refreshImpots();
   alert("Fiche sauvegardée.");
@@ -1287,7 +1294,16 @@ function refreshImpots() {
                 + data.customs.reduce((s,c)=>s+(c.part||0),0);
   const capital = Number(data.impots.capital)||0;
   const imposable = Math.max(0, revenus - totalSal - totalDD);
-  const impots = imposable * 0.5;
+  const tauxLocal = Number(data.impots.tauxLocal);
+  const tauxLocalPct = isFinite(tauxLocal) ? Math.min(20, Math.max(0, tauxLocal)) : 15;
+  const tauxInput = document.getElementById("i-taux-local");
+  if (tauxInput && document.activeElement !== tauxInput) tauxInput.value = tauxLocalPct;
+  const tranche1 = Math.min(1000, imposable);
+  const tranche2 = Math.max(0, imposable - 1000);
+  const impotFed1 = tranche1 * 0.5;
+  const impotFed2 = tranche2 * 0.6;
+  const impotLocal = tranche2 * (tauxLocalPct / 100);
+  const impots = impotFed1 + impotFed2 + impotLocal;
   const bilan = revenus - totalSal - totalDD - impots - totalDND;
   const capitalFin = capital + bilan;
 
@@ -1298,7 +1314,10 @@ function refreshImpots() {
   document.getElementById("r-salaires").textContent = neg(totalSal);
   document.getElementById("r-dep-ded").textContent = neg(totalDD);
   document.getElementById("r-imposable").textContent = fmt(imposable);
-  document.getElementById("r-impots").textContent = fmt(impots);
+  document.getElementById("r-impot-fed1").textContent = fmt(impotFed1);
+  document.getElementById("r-impot-fed2").textContent = fmt(impotFed2);
+  document.getElementById("r-impot-local").textContent = fmt(impotLocal);
+  document.getElementById("r-impots-total").textContent = fmt(impots);
   document.getElementById("r-dep-nonded").textContent = neg(totalDND);
   document.getElementById("r-bilan").textContent = fmt(bilan);
   document.getElementById("r-capital-fin").textContent = fmt(capitalFin);
@@ -1372,6 +1391,32 @@ function cloturerSemaine() {
 
   if (!confirm(msg)) return;
 
+  if (!Array.isArray(data.impotsHistory)) data.impotsHistory = [];
+  const impotFed1 = parseAmount("r-impot-fed1");
+  const impotFed2 = parseAmount("r-impot-fed2");
+  const impotLocal = parseAmount("r-impot-local");
+  data.impotsHistory.push({
+    id: Date.now(),
+    semaine: data.impots.semaine || "",
+    du: data.impots.du || "",
+    au: data.impots.au || "",
+    dateDeclaration: today(),
+    capital: parseAmount("r-capital"),
+    revenus: parseAmount("r-revenus"),
+    export: parseAmount("r-export"),
+    salaires: Math.abs(parseAmount("r-salaires")),
+    depDed: Math.abs(parseAmount("r-dep-ded")),
+    imposable: parseAmount("r-imposable"),
+    impotFed1,
+    impotFed2,
+    impotLocal,
+    tauxLocal: Number(data.impots.tauxLocal) || 0,
+    impots: impotFed1 + impotFed2 + impotLocal,
+    depNonDed: Math.abs(parseAmount("r-dep-nonded")),
+    bilan: parseAmount("r-bilan"),
+    capitalFin: capitalFin
+  });
+
   data.ventes = [];
   data.customs = [];
   data.occas = data.occas.filter(o => !o.vendue);
@@ -1388,6 +1433,117 @@ function cloturerSemaine() {
   saveData();
   refreshAll();
   toast("Semaine clôturée", `Nouvelle semaine ${wk.semaine} démarrée. Capital de départ : $${capitalFin.toFixed(2)}.`, "success", 6000);
+}
+
+// ============================================================
+// SAVE IMPOTS — historique des récaps capturés au reset semaine
+// ============================================================
+function weekNumberOf(entry) {
+  // Si déjà stocké sur l'entrée, on prend tel quel
+  if (entry.semaine != null && entry.semaine !== "") {
+    const n = Number(entry.semaine);
+    if (!Number.isNaN(n) && n > 0) return n;
+  }
+  // Sinon on recalcule depuis "du", sinon "au", sinon "dateDeclaration"
+  const dateStr = entry.du || entry.au || entry.dateDeclaration;
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return isoWeek(d);
+}
+
+function refreshImpotsHistory() {
+  const grid = document.getElementById("si-grid");
+  if (!grid) return;
+  const sortSel   = document.getElementById("si-sort");
+  const filterSel = document.getElementById("si-filter-week");
+  const sortMode    = sortSel   ? sortSel.value   : "semaine-desc";
+  const filterValue = filterSel ? filterSel.value : "";
+
+  // Annoter chaque entrée avec son numéro de semaine calculé
+  const all = (data.impotsHistory || []).map(h => ({ ...h, _wk: weekNumberOf(h) }));
+
+  // Repeupler le sélecteur de filtre avec les semaines présentes (uniques, triées asc)
+  if (filterSel) {
+    const uniques = [...new Set(all.map(h => h._wk).filter(n => n != null))].sort((a, b) => a - b);
+    const current = filterSel.value;
+    filterSel.innerHTML = `<option value="">Toutes les semaines</option>`
+      + uniques.map(n => `<option value="${n}">Semaine ${n}</option>`).join("");
+    if (current && uniques.includes(Number(current))) filterSel.value = current;
+  }
+
+  const list = all.filter(h => !filterValue || String(h._wk) === String(filterValue));
+  const cmp = (a, b) => {
+    if (sortMode === "semaine-asc")  return (a._wk||0) - (b._wk||0);
+    if (sortMode === "semaine-desc") return (b._wk||0) - (a._wk||0);
+    if (sortMode === "date-asc")     return (a.dateDeclaration||"").localeCompare(b.dateDeclaration||"");
+    if (sortMode === "date-desc")    return (b.dateDeclaration||"").localeCompare(a.dateDeclaration||"");
+    return 0;
+  };
+  list.sort(cmp);
+
+  const meta = document.getElementById("si-meta");
+  if (meta) {
+    if (!all.length) {
+      meta.textContent = " · Aucune semaine encore archivée — clique sur « Reset semaine » pour la première.";
+    } else if (filterValue) {
+      meta.textContent = ` · ${list.length} ligne(s) pour la semaine ${filterValue} (sur ${all.length} archivée(s))`;
+    } else {
+      meta.textContent = ` · ${all.length} semaine(s) archivée(s)`;
+    }
+  }
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="shadcn-card p-6 text-center text-zinc-500 md:col-span-2 xl:col-span-3">${all.length ? "Aucune ligne pour cette semaine." : "Aucune déclaration archivée pour le moment."}</div>`;
+    return;
+  }
+
+  const fmtPeriod = (du, au) => {
+    if (!du && !au) return "—";
+    const f = s => s ? s.split("-").reverse().join("/") : "";
+    return `${f(du)} → ${f(au)}`;
+  };
+  const fmtDate = s => s ? s.split("-").reverse().join("/") : "—";
+  const neg = n => n > 0 ? "-" + fmt(n) : fmt(n);
+
+  grid.innerHTML = list.map(h => `
+    <div class="shadcn-card p-5">
+      <div class="flex items-start justify-between mb-3 gap-2">
+        <div>
+          <h3 class="text-base font-semibold tracking-tight">${h._wk != null ? "Semaine " + h._wk : "Semaine —"}</h3>
+          <p class="text-xs text-zinc-400 mono mt-0.5">${fmtPeriod(h.du, h.au)}</p>
+          <p class="text-xs text-zinc-500 mt-0.5">Déclarée le ${fmtDate(h.dateDeclaration)}</p>
+        </div>
+        <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delImpotsHistory(${h.id})" title="Supprimer">✕</button>
+      </div>
+      <div class="space-y-1">
+        <div class="recap-row"><span class="text-zinc-400">Capital début de semaine</span><span class="recap-value">${fmt(h.capital)}</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Revenus dans l'état</span><span class="recap-value">${fmt(h.revenus)}</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Revenus en export</span><span class="recap-value">${fmt(h.export)}</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Salaires</span><span class="recap-value text-red-400">${neg(h.salaires)}</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Dépenses déductibles</span><span class="recap-value text-red-400">${neg(h.depDed)}</span></div>
+        <div class="recap-row highlight"><span>Montant imposable</span><span class="recap-value">${fmt(h.imposable)}</span></div>
+        ${(h.impotFed1 != null || h.impotFed2 != null || h.impotLocal != null)
+          ? `<div class="recap-row"><span class="text-zinc-400">Impôt fédéral 0–1000$ (50%)</span><span class="recap-value">${fmt(h.impotFed1||0)}</span></div>
+             <div class="recap-row"><span class="text-zinc-400">Impôt fédéral &gt;1000$ (60%)</span><span class="recap-value">${fmt(h.impotFed2||0)}</span></div>
+             <div class="recap-row"><span class="text-zinc-400">Impôt local (${(h.tauxLocal!=null?h.tauxLocal:15)}%)</span><span class="recap-value">${fmt(h.impotLocal||0)}</span></div>
+             <div class="recap-row highlight"><span>Total impôts à payer</span><span class="recap-value">${fmt(h.impots)}</span></div>`
+          : `<div class="recap-row"><span class="text-zinc-400">Impôts (50%)</span><span class="recap-value">${fmt(h.impots)}</span></div>`}
+        <div class="recap-row"><span class="text-zinc-400">Dépenses non déductibles</span><span class="recap-value text-red-400">${neg(h.depNonDed)}</span></div>
+        <div class="recap-row highlight"><span>Bilan</span><span class="recap-value">${fmt(h.bilan)}</span></div>
+        <div class="recap-row final"><span>Capital fin de semaine</span><span class="recap-value">${fmt(h.capitalFin)}</span></div>
+      </div>
+    </div>
+  `).join("");
+  applyAdminLock();
+}
+
+function delImpotsHistory(id) {
+  if (!requireAdmin()) return;
+  if (!confirm("Supprimer cette ligne d'historique ? Cette action est irréversible.")) return;
+  data.impotsHistory = (data.impotsHistory || []).filter(h => h.id !== id);
+  saveData();
+  refreshImpotsHistory();
 }
 
 // ============================================================
@@ -1788,7 +1944,14 @@ function buildBilanMarkdown(weekDate) {
   const totalDND = data.depNonDed.reduce((s,d) => s + (d.mnt||0), 0);
   const revenus = totalVentes + totalCustomsPart;
   const imposable = Math.max(0, revenus - totalSal - totalDD);
-  const impots = imposable * 0.5;
+  const tauxLocalRaw = Number(data.impots && data.impots.tauxLocal);
+  const tauxLocal = isFinite(tauxLocalRaw) ? Math.min(20, Math.max(0, tauxLocalRaw)) : 15;
+  const tranche1 = Math.min(1000, imposable);
+  const tranche2 = Math.max(0, imposable - 1000);
+  const impotFed1 = tranche1 * 0.5;
+  const impotFed2 = tranche2 * 0.6;
+  const impotLocal = tranche2 * (tauxLocal / 100);
+  const impots = impotFed1 + impotFed2 + impotLocal;
   const bilan = revenus - totalSal - totalDD - impots - totalDND;
 
   const f = n => "$" + Number(n||0).toFixed(2);
@@ -1808,7 +1971,10 @@ function buildBilanMarkdown(weekDate) {
 | Salaires | -${f(totalSal)} |
 | Dépenses déductibles | -${f(totalDD)} |
 | **Montant imposable** | **${f(imposable)}** |
-| Impôts à venir (50%) | ${f(impots)} |
+| Impôt fédéral 0–1000$ (50%) | ${f(impotFed1)} |
+| Impôt fédéral >1000$ (60%) | ${f(impotFed2)} |
+| Impôt local (${tauxLocal}%) sur tranche >1000$ | ${f(impotLocal)} |
+| Total impôts à venir | ${f(impots)} |
 | Dépenses non déductibles | -${f(totalDND)} |
 | **Bilan** | **${f(bilan)}** |
 
@@ -2230,6 +2396,7 @@ function refreshAll() {
   refreshInventory();
   refreshArmesPerso();
   refreshPartenaires();
+  refreshImpotsHistory();
   renderPrix();
 }
 
@@ -2472,11 +2639,13 @@ document.addEventListener("input", e => {
   if (["v-arme","v-arme-occas","v-qte","v-reduc"].includes(e.target.id)) venteCalc();
   if (["c-cout","c-reduc"].includes(e.target.id)) customCalc();
   if (["o-arme","o-taux"].includes(e.target.id)) occasCalc();
-  if (["i-semaine","i-du","i-au","i-capital"].includes(e.target.id)) {
+  if (["i-semaine","i-du","i-au","i-capital","i-taux-local"].includes(e.target.id)) {
     data.impots.semaine = document.getElementById("i-semaine").value;
     data.impots.du = document.getElementById("i-du").value;
     data.impots.au = document.getElementById("i-au").value;
     data.impots.capital = Number(document.getElementById("i-capital").value) || 0;
+    const tx = Number(document.getElementById("i-taux-local").value);
+    data.impots.tauxLocal = isFinite(tx) ? Math.min(20, Math.max(0, tx)) : 0;
     saveData();
     refreshImpots();
   }
@@ -2498,6 +2667,8 @@ document.getElementById("c-search").addEventListener("input", refreshCustoms);
 document.getElementById("o-hide-sold").addEventListener("change", refreshOccas);
 document.getElementById("ap-search").addEventListener("input", refreshArmesPerso);
 document.getElementById("part-search").addEventListener("input", refreshPartenaires);
+document.getElementById("si-sort")?.addEventListener("change", refreshImpotsHistory);
+document.getElementById("si-filter-week")?.addEventListener("change", refreshImpotsHistory);
 
 // ============================================================
 // BOOT

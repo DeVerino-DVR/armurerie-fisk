@@ -78,6 +78,8 @@
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="impots">Impôts / Bilan</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
+              data-tab="save-impots">Save impôts</button>
+      <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="saves">Saves</button>
       <button class="tab-btn inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-50 transition-colors"
               data-tab="params">Paramètres</button>
@@ -625,7 +627,10 @@
         <div class="recap-row"><span class="text-zinc-400">Salaires</span><span class="recap-value text-red-400" id="r-salaires">$0.00</span></div>
         <div class="recap-row"><span class="text-zinc-400">Dépenses déductibles</span><span class="recap-value text-red-400" id="r-dep-ded">$0.00</span></div>
         <div class="recap-row highlight"><span>Montant imposable</span><span class="recap-value" id="r-imposable">$0.00</span></div>
-        <div class="recap-row"><span class="text-zinc-400">Impôts à venir (50%)</span><span class="recap-value" id="r-impots">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Impôt fédéral 0–1000$ (50%)</span><span class="recap-value" id="r-impot-fed1">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400">Impôt fédéral &gt;1000$ (60%)</span><span class="recap-value" id="r-impot-fed2">$0.00</span></div>
+        <div class="recap-row"><span class="text-zinc-400 inline-flex items-center gap-2">Impôt local (<input data-admin-only type="number" id="i-taux-local" min="0" max="20" step="0.5" value="15" class="shadcn-input mono" style="width:60px;height:24px;padding:0 6px;font-size:12px">%) sur tranche &gt;1000$</span><span class="recap-value" id="r-impot-local">$0.00</span></div>
+        <div class="recap-row highlight"><span>Total impôts à payer</span><span class="recap-value" id="r-impots-total">$0.00</span></div>
         <div class="recap-row"><span class="text-zinc-400">Dépenses non déductibles</span><span class="recap-value text-red-400" id="r-dep-nonded">$0.00</span></div>
         <div class="recap-row highlight"><span>Bilan</span><span class="recap-value" id="r-bilan">$0.00</span></div>
         <div class="recap-row final"><span>Capital fin de semaine</span><span class="recap-value" id="r-capital-fin">$0.00</span></div>
@@ -775,6 +780,37 @@
       </div>
     </div>
   </div>
+</section>
+
+<!-- ============================================================
+     SAVE IMPOTS — historique des récapitulatifs hebdo (capturé au reset)
+     ============================================================ -->
+<section id="save-impots" class="tab-content hidden">
+
+  <div class="shadcn-card p-6 mb-6">
+    <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+      <div>
+        <h2 class="text-xl font-semibold tracking-tight">Historique des déclarations d'impôts</h2>
+        <p class="text-sm text-zinc-400 mt-1">
+          À chaque clic sur « Reset semaine », le récapitulatif est archivé ici.
+          <span class="text-zinc-500" id="si-meta"></span>
+        </p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <select id="si-filter-week" class="shadcn-input" style="width:auto">
+          <option value="">Toutes les semaines</option>
+        </select>
+        <select id="si-sort" class="shadcn-input" style="width:auto">
+          <option value="semaine-desc">Semaine ↓ (récent)</option>
+          <option value="semaine-asc">Semaine ↑ (ancien)</option>
+          <option value="date-desc">Date déclaration ↓</option>
+          <option value="date-asc">Date déclaration ↑</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="si-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 </section>
 
 <!-- ============================================================

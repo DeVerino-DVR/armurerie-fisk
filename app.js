@@ -1438,7 +1438,7 @@ function declarerImpots() {
 // ============================================================
 // CLOTURE SEMAINE — reset compta après déclaration impôts
 // ============================================================
-function cloturerSemaine() {
+async function cloturerSemaine() {
   if (!requireAdmin()) return;
 
   const parseAmount = id => Number(document.getElementById(id).textContent.replace(/[^0-9.-]/g, "")) || 0;
@@ -1446,23 +1446,61 @@ function cloturerSemaine() {
   const occasInStock = data.occas.filter(o => !o.vendue).length;
   const occasVendues = data.occas.filter(o => o.vendue).length;
 
+  // GARDE-FOU : on refuse le reset si la config GitHub est incomplète,
+  // sinon on archive automatiquement avant le clear (cf. incident du 2026-04-30).
+  const { workerUrl, teamPassword } = githubConfig;
+  if (!workerUrl || !teamPassword) {
+    alert(
+      "⛔ Reset bloqué : configuration GitHub incomplète.\n\n" +
+      "Avant de clôturer la semaine, l'app doit pouvoir archiver les données sur GitHub. " +
+      "Renseigne d'abord l'URL du Worker et le mot de passe équipe dans Paramètres.\n\n" +
+      "Sans cet archivage, un reset accidentel = perte définitive des lignes (ventes/customs/dépenses).");
+    return;
+  }
+
   const msg =
     "⚠️ Clôturer la semaine ?\n\n" +
-    "Cette action vide la compta pour démarrer la nouvelle semaine. Vérifie d'abord que tu as bien :\n" +
-    "  • cliqué sur « Sauvegarder la semaine » (Paramètres)\n" +
-    "  • envoyé la déclaration sur le Google Form\n\n" +
-    "Ce qui sera RESET :\n" +
+    "Cette action va :\n" +
+    "  1. Archiver automatiquement la semaine sur GitHub (sauvegarde de sécurité)\n" +
+    "  2. Vider la compta pour démarrer la nouvelle semaine\n\n" +
+    "Ce qui sera RESET après l'archivage :\n" +
     `  • ${data.ventes.length} vente(s)\n` +
     `  • ${data.customs.length} custom(s)\n` +
     `  • ${occasVendues} arme(s) d'occasion vendue(s) supprimée(s) (${occasInStock} en stock conservée(s))\n` +
     `  • ${data.depDed.length} dépense(s) déductible(s)\n` +
     `  • ${data.depNonDed.length} dépense(s) non déductible(s)\n` +
     "  • Salaires, primes et heures de tous les employés remis à 0\n\n" +
-    `Le capital de début de la nouvelle semaine sera : $${capitalFin.toFixed(2)} (capital de fin actuel).\n\n` +
-    "Cette action est IRRÉVERSIBLE en local. Continuer ?";
+    `Capital de début de la nouvelle semaine : $${capitalFin.toFixed(2)} (capital de fin actuel).\n\n` +
+    "Si l'archivage GitHub échoue, le reset sera ANNULÉ — tes données resteront intactes.\n\n" +
+    "Continuer ?";
 
   if (!confirm(msg)) return;
 
+  // Étape 1 : archivage GitHub. Si ça plante, on n'efface rien.
+  const resetBtn = document.querySelector('[onclick="cloturerSemaine()"]');
+  const origLabel = resetBtn ? resetBtn.innerHTML : null;
+  if (resetBtn) { resetBtn.disabled = true; resetBtn.innerHTML = '<span class="spinner"></span> Archivage GitHub…'; }
+  try {
+    const weekDate = data.impots.du || today();
+    const archiveMsg = `Clôture semaine ${data.impots.semaine || weekDate} (auto-archive avant reset)`;
+    const json = await archiveWeekToGithub({ weekDate, msg: archiveMsg });
+    toast(
+      "Semaine archivée sur GitHub",
+      `${json.count} fichier(s) commité(s). <a class="link" href="${json.folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,
+      "success", 6000
+    );
+  } catch (err) {
+    if (resetBtn) { resetBtn.disabled = false; resetBtn.innerHTML = origLabel; }
+    toast(
+      "Reset annulé — l'archivage a échoué",
+      `Aucune donnée n'a été supprimée. Erreur : ${err.message}`,
+      "error", 10000
+    );
+    return;
+  }
+  if (resetBtn) { resetBtn.disabled = false; resetBtn.innerHTML = origLabel; }
+
+  // Étape 2 : reset local + push state vers le worker
   if (!Array.isArray(data.impotsHistory)) data.impotsHistory = [];
   const impotFed1 = parseAmount("r-impot-fed1");
   const impotFed2 = parseAmount("r-impot-fed2");
@@ -2063,9 +2101,43 @@ function buildBilanMarkdown(weekDate) {
 `;
 }
 
+async function archiveWeekToGithub({ weekDate, msg }) {
+  const { workerUrl, teamPassword, userName } = githubConfig;
+  if (!workerUrl || !teamPassword) {
+    throw new Error("Configuration GitHub incomplète (URL Worker + mot de passe équipe).");
+  }
+  if (saveTimer) { clearTimeout(saveTimer); await pushStateToWorker(); }
+
+  const res = await fetch(workerUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "archive",
+      password: teamPassword,
+      user: userName || "inconnu",
+      commitMsg: msg,
+      weekDate
+    })
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.error || `Erreur Worker ${res.status}`);
+  }
+
+  const folderUrl = json.folderUrl;
+  githubConfig.lastPush = { date: new Date().toISOString(), url: folderUrl };
+  saveGithubConfigObj();
+  const lastPushEl = document.getElementById("gh-last-push");
+  if (lastPushEl) {
+    lastPushEl.innerHTML =
+      `Dernier push : <span class="mono">${new Date().toLocaleString("fr-FR")}</span> → <a class="link" href="${folderUrl}" target="_blank" rel="noreferrer">voir sur GitHub</a>`;
+  }
+  return json;
+}
+
 async function pushWeekToGithub() {
   if (!requireAdmin()) return;
-  const { workerUrl, teamPassword, userName } = githubConfig;
+  const { workerUrl, teamPassword } = githubConfig;
   if (!workerUrl || !teamPassword) {
     toast("Configuration incomplète", "Renseigne l'URL du Worker et le mot de passe équipe.", "error");
     return;
@@ -2077,37 +2149,12 @@ async function pushWeekToGithub() {
   label.innerHTML = '<span class="spinner"></span> Envoi en cours…';
 
   try {
-    // S'assure que les dernières modifs sont bien poussées avant l'archive
-    if (saveTimer) { clearTimeout(saveTimer); await pushStateToWorker(); }
-
     const weekDate = document.getElementById("gh-week-date").value || today();
     const msg = (document.getElementById("gh-commit-msg").value || `Sauvegarde semaine ${weekDate}`).trim();
-
-    const res = await fetch(workerUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "archive",
-        password: teamPassword,
-        user: userName || "inconnu",
-        commitMsg: msg,
-        weekDate
-      })
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      throw new Error(json.error || `Erreur Worker ${res.status}`);
-    }
-
-    const folderUrl = json.folderUrl;
-    githubConfig.lastPush = { date: new Date().toISOString(), url: folderUrl };
-    saveGithubConfigObj();
-    document.getElementById("gh-last-push").innerHTML =
-      `Dernier push : <span class="mono">${new Date().toLocaleString("fr-FR")}</span> → <a class="link" href="${folderUrl}" target="_blank" rel="noreferrer">voir sur GitHub</a>`;
-
+    const json = await archiveWeekToGithub({ weekDate, msg });
     toast(
       "Semaine archivée sur GitHub",
-      `${json.count} fichier(s) commité(s). <a class="link" href="${folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,
+      `${json.count} fichier(s) commité(s). <a class="link" href="${json.folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,
       "success", 8000
     );
   } catch (err) {

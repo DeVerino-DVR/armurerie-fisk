@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1777294743357,
+    "date": "2026-04-27",
+    "vendeur": "Eva Smith",
+    "client": "Joey Williams",
+    "arme": "Cattleman",
+    "serie": "1774827994-5075",
+    "tauxReprise": 50,
+    "prixReprise": 12.5,
+    "prixRevente": 21.25,
+    "vendue": false,
+    "info": "Aucune"
+  },
+  {
+    "id": 1777323711981,
+    "date": "2026-04-27",
+    "vendeur": "Colette Mcwilly",
+    "client": "Hank McCoy",
+    "arme": "Cattleman",
+    "serie": "1777069773-6401",
+    "tauxReprise": 50,
+    "prixReprise": 12.5,
+    "prixRevente": 21.25,
+    "vendue": false,
+    "info": "ras"
+  },
+  {
+    "id": 1777323729410,
+    "date": "2026-04-27",
+    "vendeur": "Colette Mcwilly",
+    "client": "Hank McCoy",
+    "arme": "Cattleman",
+    "serie": "1777069773-5059",
+    "tauxReprise": 50,
+    "prixReprise": 12.5,
+    "prixRevente": 21.25,
+    "vendue": false,
+    "info": "ras"
+  },
+  {
+    "id": 1777372133303,
+    "date": "2026-04-28",
+    "vendeur": "Silas Blackwood",
+    "client": "Cal Brooks",
+    "arme": "M1899",
+    "serie": "1768249527-5618",
+    "tauxReprise": 50,
+    "prixReprise": 27.5,
+    "prixRevente": 46.75,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1777408164845,
+    "date": "2026-04-28",
+    "vendeur": "Silas Blackwood",
+    "client": "Tahawus Kodiak",
+    "arme": "Canon scié",
+    "serie": "1759581466-5493",
+    "tauxReprise": 50,
+    "prixReprise": 22.5,
+    "prixRevente": 38.25,
+    "vendue": true,
+    "info": ""
+  },
+  {
+    "id": 1777488573738,
+    "date": "2026-04-29",
+    "vendeur": "John Taylor",
+    "client": "John Taylor",
+    "arme": "Cattleman",
+    "serie": "1776888858-5883",
+    "tauxReprise": 50,
+    "prixReprise": 12.5,
+    "prixRevente": 21.25,
+    "vendue": false,
+    "info": ""
+  }
+]

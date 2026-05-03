@@ -1,0 +1,33 @@
+{
+  "semaine": {
+    "semaine": 18,
+    "du": "2026-04-26",
+    "au": "2026-05-02",
+    "capital": 2460.11
+  },
+  "depensesDeductibles": [
+    {
+      "id": 1777585129327,
+      "date": "2026-04-30",
+      "lib": "Arcs + carquois",
+      "mnt": 175
+    },
+    {
+      "id": 1777585151118,
+      "date": "2026-04-30",
+      "lib": "Lingot de fer",
+      "mnt": 500,
+      "matItem": "iron_ingot",
+      "matQty": 100
+    },
+    {
+      "id": 1777585161956,
+      "date": "2026-04-30",
+      "lib": "Lingot de cuivre",
+      "mnt": 750,
+      "matItem": "copper_ingot",
+      "matQty": 100
+    }
+  ],
+  "depensesNonDeductibles": []
+}

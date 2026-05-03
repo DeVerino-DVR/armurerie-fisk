@@ -3,64 +3,101 @@
     "prenom": "Dikson",
     "nom": "Fisk",
     "statut": "Patron",
-    "salaire": 0,
-    "pin": "0826"
+    "salaire": 150,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "Etienne",
     "nom": "Lefebvre",
     "statut": "Patron",
-    "salaire": 0,
-    "pin": "0826"
+    "salaire": 150,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "Colette",
     "nom": "Mcwilly",
     "statut": "Co-patron",
-    "salaire": 100,
-    "pin": "0826"
+    "salaire": 200,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "Julien",
     "nom": "Lefebvre",
     "statut": "Co-patron",
     "salaire": 0,
-    "pin": "0826"
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "Jasper",
     "nom": "Flint",
     "statut": "Employé",
-    "salaire": 50
+    "salaire": 200,
+    "prime": 0,
+    "heures": 0
   },
   {
-    "prenom": "Micheal",
-    "nom": "Jones",
+    "prenom": "Alaric",
+    "nom": "Brynmor",
     "statut": "Gérant",
-    "salaire": 0
+    "salaire": 0,
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "Eva",
     "nom": "Smith",
-    "statut": "Employé",
-    "salaire": 100
+    "statut": "Co-patron",
+    "salaire": 300,
+    "prime": 0,
+    "heures": 0,
+    "pin": "0826"
   },
   {
     "prenom": "Silas",
     "nom": "Blackwood",
     "statut": "Employé",
-    "salaire": 100
+    "salaire": 300,
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "John",
     "nom": "Taylor",
     "statut": "Employé",
-    "salaire": 10
+    "salaire": 200,
+    "prime": 0,
+    "heures": 0
   },
   {
     "prenom": "Ivy",
     "nom": "Cross",
     "statut": "Employé",
-    "salaire": 0
+    "salaire": 0,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Valentina",
+    "nom": "Cross",
+    "statut": "Employé",
+    "salaire": 0,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Molly",
+    "nom": "Price",
+    "statut": "Employé",
+    "salaire": 250,
+    "prime": 0,
+    "heures": 0
   }
 ]

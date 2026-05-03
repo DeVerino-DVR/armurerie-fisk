@@ -1,0 +1,98 @@
+[
+  {
+    "id": 1777729458040,
+    "date": "2026-05-02",
+    "vendeur": "Silas Blackwood",
+    "client": "Butters Lotte",
+    "arme": "Lancaster",
+    "cout": 58.25,
+    "final": 72.8125,
+    "part": 14.5625,
+    "reduc": 0,
+    "info": "Crosse nacre, carcasse et canon or"
+  },
+  {
+    "id": 1777739819670,
+    "date": "2026-05-02",
+    "vendeur": "Silas Blackwood",
+    "client": "Hank Holloway",
+    "arme": "Canon scié",
+    "cout": 15,
+    "final": 18.75,
+    "part": 3.75,
+    "reduc": 0,
+    "info": "canon argent"
+  },
+  {
+    "id": 1777739985563,
+    "date": "2026-05-02",
+    "vendeur": "Silas Blackwood",
+    "client": "Hank Holloway",
+    "arme": "Canon scié",
+    "cout": 18.75,
+    "final": 23.4375,
+    "part": 4.6875,
+    "reduc": 0,
+    "info": "canon argent"
+  },
+  {
+    "id": 1777740035314,
+    "date": "2026-05-02",
+    "vendeur": "Silas Blackwood",
+    "client": "\tHank Holloway",
+    "arme": "Canon scié",
+    "cout": 15,
+    "final": 18.75,
+    "part": 3.75,
+    "reduc": 0,
+    "info": "canon argent"
+  },
+  {
+    "id": 1777770127016,
+    "date": "2026-05-03",
+    "vendeur": "Silas Blackwood",
+    "client": "John Mariani",
+    "arme": "M1899",
+    "cout": 45,
+    "final": 56.25,
+    "part": 11.25,
+    "reduc": 0,
+    "info": "Canon"
+  },
+  {
+    "id": 1777770142259,
+    "date": "2026-05-03",
+    "vendeur": "Silas Blackwood",
+    "client": "John Mariani",
+    "arme": "M1899",
+    "cout": 45,
+    "final": 56.25,
+    "part": 11.25,
+    "reduc": 0,
+    "info": "Canon"
+  },
+  {
+    "id": 1777836765004,
+    "date": "2026-05-03",
+    "vendeur": "Silas Blackwood",
+    "client": "Pearl Callahan",
+    "arme": "Pompe semi auto",
+    "cout": 120,
+    "final": 150,
+    "part": 30,
+    "reduc": 0,
+    "info": "Canon "
+  },
+  {
+    "id": 1777843811530,
+    "date": "2026-05-03",
+    "vendeur": "Molly Price",
+    "client": "Clyde Cooper",
+    "arme": "LeMat ",
+    "cout": 245,
+    "final": 306.25,
+    "part": 61.25,
+    "reduc": 0,
+    "info": ""
+  }
+]

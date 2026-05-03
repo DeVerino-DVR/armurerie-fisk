@@ -4,22 +4,22 @@
 
 | Poste | Montant |
 |---|---:|
-| Revenus totaux | $8719.44 |
-| — ventes d'armes | $5727.00 |
-| — customs | $2087.19 (part entreprise : $417.44) |
-| — armes d'occas vendues | $905.25 |
-| Salaires | -$360.00 |
-| Dépenses déductibles | -$2094.55 |
-| **Montant imposable** | **$6264.89** |
-| Impôts (50%) | $3132.44 |
-| Dépenses non déductibles | -$200.00 |
-| **Bilan** | **$2932.44** |
+| Revenus totaux | $4514.00 |
+| — ventes d'armes | $3730.75 |
+| — customs | $702.50 (part entreprise : $140.50) |
+| — armes d'occas vendues | $80.75 |
+| Salaires | -$1750.00 |
+| Dépenses déductibles | -$1425.00 |
+| **Montant imposable** | **$1339.00** |
+| Impôts (50%) | $669.50 |
+| Dépenses non déductibles | -$0.00 |
+| **Bilan** | **$669.50** |
 
 ## Statistiques
 
-- Ventes : 133
-- Customs : 22
-- Armes d'occas stock : 0 (vendues : 15)
-- Employés : 10
+- Ventes : 125
+- Customs : 8
+- Armes d'occas stock : 7 (vendues : 3)
+- Employés : 12
 
-*Généré automatiquement le 26/04/2026 20:19:04*
+*Généré automatiquement le 03/05/2026 22:20:59*

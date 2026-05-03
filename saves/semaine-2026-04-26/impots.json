@@ -1,140 +1,33 @@
 {
   "semaine": {
-    "semaine": "17",
-    "du": "2026-04-20",
-    "au": "2026-04-26",
-    "capital": 200
+    "semaine": 18,
+    "du": "2026-04-26",
+    "au": "2026-05-02",
+    "capital": 2460.11
   },
   "depensesDeductibles": [
     {
-      "id": 1776728589552,
-      "date": "2026-04-20",
-      "lib": "Planche",
-      "mnt": 33
+      "id": 1777585129327,
+      "date": "2026-04-30",
+      "lib": "Arcs + carquois",
+      "mnt": 175
     },
     {
-      "id": 1776730483084,
-      "date": "2026-04-20",
-      "lib": "Pièces de cuir ",
-      "mnt": 40
-    },
-    {
-      "id": 1776871476583,
-      "date": "2026-04-22",
-      "lib": "Minerai de fer",
-      "mnt": 9,
-      "matItem": "iron",
-      "matQty": 300
-    },
-    {
-      "id": 1776871501399,
-      "date": "2026-04-22",
-      "lib": "Sac de charbon",
-      "mnt": 30,
-      "matItem": "charcoal_bag",
-      "matQty": 30
-    },
-    {
-      "id": 1776871524167,
-      "date": "2026-04-22",
-      "lib": "Charbon",
-      "mnt": 9,
-      "matItem": "coal",
-      "matQty": 300
-    },
-    {
-      "id": 1776964865532,
-      "date": "2026-04-23",
-      "lib": "Sac de charbon",
-      "mnt": 150,
-      "matItem": "charcoal_bag",
-      "matQty": 150
-    },
-    {
-      "id": 1776964883023,
-      "date": "2026-04-23",
-      "lib": "Charbon",
-      "mnt": 30,
-      "matItem": "coal",
-      "matQty": 100
-    },
-    {
-      "id": 1776964893724,
-      "date": "2026-04-23",
-      "lib": "Minerai de fer",
-      "mnt": 30,
-      "matItem": "iron",
-      "matQty": 100
-    },
-    {
-      "id": 1776964911378,
-      "date": "2026-04-23",
+      "id": 1777585151118,
+      "date": "2026-04-30",
       "lib": "Lingot de fer",
       "mnt": 500,
       "matItem": "iron_ingot",
       "matQty": 100
     },
     {
-      "id": 1776964922955,
-      "date": "2026-04-23",
+      "id": 1777585161956,
+      "date": "2026-04-30",
       "lib": "Lingot de cuivre",
       "mnt": 750,
       "matItem": "copper_ingot",
       "matQty": 100
-    },
-    {
-      "id": 1776965006522,
-      "date": "2026-04-23",
-      "lib": "Lingot d'or",
-      "mnt": 135,
-      "matItem": "gold_ingot",
-      "matQty": 9
-    },
-    {
-      "id": 1777054809635,
-      "date": "2026-04-24",
-      "lib": "Sac de charbon",
-      "mnt": 250,
-      "matItem": "charcoal_bag",
-      "matQty": 250
-    },
-    {
-      "id": 1777054831115,
-      "date": "2026-04-24",
-      "lib": "Charbon",
-      "mnt": 27,
-      "matItem": "coal",
-      "matQty": 900
-    },
-    {
-      "id": 1777054848688,
-      "date": "2026-04-24",
-      "lib": "Minerai de fer",
-      "mnt": 30,
-      "matItem": "iron",
-      "matQty": 1000
-    },
-    {
-      "id": 1777135487811,
-      "date": "2026-04-25",
-      "lib": "Minerai de fer",
-      "mnt": 4.05,
-      "matItem": "iron",
-      "matQty": 135
-    },
-    {
-      "id": 1777150865862,
-      "date": "2026-04-25",
-      "lib": "Nourritures",
-      "mnt": 67.5
     }
   ],
-  "depensesNonDeductibles": [
-    {
-      "id": 1777234706530,
-      "date": "2026-04-26",
-      "lib": "Sac",
-      "mnt": 200
-    }
-  ]
+  "depensesNonDeductibles": []
 }

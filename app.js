@@ -557,13 +557,11 @@ function applyAdminLock() {
   // Onglet Paramètres caché aux invités (URL/mot de passe ne doivent pas être visibles)
   const paramsTabBtn = document.querySelector('.tab-btn[data-tab="params"]');
   if (paramsTabBtn) paramsTabBtn.style.display = guest ? "none" : "";
-  const savesTabBtn = document.querySelector('.tab-btn[data-tab="saves"]');
-  if (savesTabBtn) savesTabBtn.style.display = guest ? "none" : "";
 
-  // Si l'invité était sur Paramètres ou Saves au moment de la connexion, on le bascule sur Ventes
+  // Si l'invité était sur Paramètres au moment de la connexion, on le bascule sur Ventes
   if (guest) {
     const activeTab = document.querySelector('.tab-btn[data-state="active"]');
-    if (activeTab && (activeTab.dataset.tab === "params" || activeTab.dataset.tab === "saves")) {
+    if (activeTab && activeTab.dataset.tab === "params") {
       const ventesBtn = document.querySelector('.tab-btn[data-tab="ventes"]');
       if (ventesBtn) ventesBtn.click();
     }

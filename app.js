@@ -182,6 +182,11 @@ const STORAGE_KEY = "carcanhoes_data_v1";
 const GITHUB_KEY = "carcanhoes_github_v1";
 const USER_KEY = "carcanhoes_user_v1";
 
+// URL du Worker utilisée pour le mode invité (lecture seule, ex: département du Trésor).
+// Le Worker expose GET /state sans mot de passe ; le secret reste TEAM_PASSWORD côté serveur.
+// Renseigner ici l'URL de production une fois pour toutes (pas de secret côté navigateur).
+const DEFAULT_WORKER_URL = "https://carcanhoes-sync.patrickloureiro-dvr.workers.dev";
+
 let data = loadData();
 let githubConfig = loadGithubConfig();
 let currentUser = null;
@@ -249,6 +254,11 @@ function saveGithubConfigObj() {
   localStorage.setItem(GITHUB_KEY, JSON.stringify(githubConfig));
 }
 
+// URL utilisée pour les lectures (GET /state). Pour les invités, on tombe sur DEFAULT_WORKER_URL.
+function getReadWorkerUrl() {
+  return githubConfig.workerUrl || DEFAULT_WORKER_URL || "";
+}
+
 // ============================================================
 // SYNC STATUS (UI indicator in header)
 // ============================================================
@@ -274,10 +284,11 @@ function setSyncStatus(state, message = "") {
 // WORKER SYNC — état partagé
 // ============================================================
 async function loadStateFromWorker() {
-  if (!githubConfig.workerUrl) return;
+  const readUrl = getReadWorkerUrl();
+  if (!readUrl) return;
   setSyncStatus("syncing");
   try {
-    const res = await fetch(`${githubConfig.workerUrl}/state`);
+    const res = await fetch(`${readUrl}/state`);
     const j = await res.json();
     if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
     isApplyingRemoteState = true;
@@ -299,6 +310,8 @@ async function loadStateFromWorker() {
 
 function schedulePushToWorker() {
   if (isApplyingRemoteState) return;
+  // Les invités n'ont aucun droit d'écriture, jamais.
+  if (isGuest()) return;
   if (!githubConfig.workerUrl || !githubConfig.teamPassword) {
     setSyncStatus("offline");
     return;
@@ -309,6 +322,7 @@ function schedulePushToWorker() {
 }
 
 async function pushStateToWorker() {
+  if (isGuest()) return;
   if (!githubConfig.workerUrl || !githubConfig.teamPassword) {
     setSyncStatus("offline");
     return;
@@ -336,7 +350,7 @@ async function pushStateToWorker() {
 }
 
 async function refreshFromWorker() {
-  if (!githubConfig.workerUrl) {
+  if (!getReadWorkerUrl()) {
     toast("Non configuré", "Configure d'abord le Worker dans les Paramètres.", "error");
     return;
   }
@@ -347,9 +361,10 @@ async function refreshFromWorker() {
 // Auto-refresh toutes les 45s si configuré et onglet visible
 setInterval(() => {
   if (document.hidden) return;
-  if (!githubConfig.workerUrl || syncStatus === "pending" || syncStatus === "syncing") return;
+  const readUrl = getReadWorkerUrl();
+  if (!readUrl || syncStatus === "pending" || syncStatus === "syncing") return;
   // Poll léger : GET /state et compare version
-  fetch(`${githubConfig.workerUrl}/state`)
+  fetch(`${readUrl}/state`)
     .then(r => r.json())
     .then(j => {
       if (j.ok && j.state?.meta?.version > lastRemoteVersion) {
@@ -463,7 +478,11 @@ function refreshOccasStockSelect() {
 // AUTH / PERMISSIONS
 // ============================================================
 function isAdmin() {
-  return !!currentUser && ADMIN_ROLES.includes(currentUser.statut);
+  return !!currentUser && !currentUser.guest && ADMIN_ROLES.includes(currentUser.statut);
+}
+
+function isGuest() {
+  return !!currentUser && currentUser.guest === true;
 }
 
 function requireAdmin() {
@@ -479,6 +498,7 @@ function loadCurrentUser() {
   if (!raw) return null;
   try {
     const u = JSON.parse(raw);
+    if (u.guest) return { prenom: "Invité", nom: "Trésor", statut: "Invité", guest: true };
     const match = data.employes.find(e => e.prenom === u.prenom && e.nom === u.nom);
     if (!match || match.statut !== u.statut) return null;
     return { prenom: match.prenom, nom: match.nom, statut: match.statut };
@@ -495,6 +515,7 @@ function logout() {
   persistCurrentUser();
   refreshUserChip();
   applyAdminLock();
+  applyGuestFormLock();
   showLoginModal();
 }
 
@@ -509,11 +530,15 @@ function refreshUserChip() {
   document.getElementById("user-chip-label").textContent = `${currentUser.prenom} ${currentUser.nom}`;
   const role = document.getElementById("user-chip-role");
   role.textContent = currentUser.statut;
-  role.className = "badge " + (isAdmin() ? "badge-success" : "badge-muted");
+  let cls = "badge-muted";
+  if (isAdmin()) cls = "badge-success";
+  else if (isGuest()) cls = "badge-warning";
+  role.className = "badge " + cls;
 }
 
 function applyAdminLock() {
   const admin = isAdmin();
+  const guest = isGuest();
   document.querySelectorAll("[data-admin-only]").forEach(el => {
     if (admin) {
       el.disabled = false;
@@ -523,6 +548,41 @@ function applyAdminLock() {
       el.disabled = true;
       el.setAttribute("title", "Réservé au Patron / Co-patron");
       el.classList.add("is-locked");
+    }
+  });
+
+  // Mode invité (lecture seule) : verrouille toutes les interactions d'écriture
+  document.body.classList.toggle("is-guest", guest);
+
+  // Onglet Paramètres caché aux invités (URL/mot de passe ne doivent pas être visibles)
+  const paramsTabBtn = document.querySelector('.tab-btn[data-tab="params"]');
+  if (paramsTabBtn) paramsTabBtn.style.display = guest ? "none" : "";
+  const savesTabBtn = document.querySelector('.tab-btn[data-tab="saves"]');
+  if (savesTabBtn) savesTabBtn.style.display = guest ? "none" : "";
+
+  // Si l'invité était sur Paramètres ou Saves au moment de la connexion, on le bascule sur Ventes
+  if (guest) {
+    const activeTab = document.querySelector('.tab-btn[data-state="active"]');
+    if (activeTab && (activeTab.dataset.tab === "params" || activeTab.dataset.tab === "saves")) {
+      const ventesBtn = document.querySelector('.tab-btn[data-tab="ventes"]');
+      if (ventesBtn) ventesBtn.click();
+    }
+  }
+}
+
+// Verrouille toutes les commandes d'écriture quand l'utilisateur est invité.
+// Appelée à chaque refreshAll() pour couvrir le contenu rendu dynamiquement (boutons supprimer, etc.).
+function applyGuestFormLock() {
+  const guest = isGuest();
+  document.querySelectorAll(".tab-content button, .tab-content input, .tab-content select, .tab-content textarea").forEach(el => {
+    if (guest) {
+      if (!el.hasAttribute("data-guest-locked")) {
+        el.setAttribute("data-guest-locked", el.disabled ? "kept" : "set");
+        el.disabled = true;
+      }
+    } else if (el.hasAttribute("data-guest-locked")) {
+      if (el.getAttribute("data-guest-locked") === "set") el.disabled = false;
+      el.removeAttribute("data-guest-locked");
     }
   });
 }
@@ -584,7 +644,25 @@ function submitLogin() {
   hideLoginModal();
   refreshUserChip();
   applyAdminLock();
+  applyGuestFormLock();
   toast("Connexion réussie", `Bienvenue ${currentUser.prenom} — ${currentUser.statut}`, "success", 2500);
+}
+
+function loginAsGuest() {
+  const errEl = document.getElementById("login-error");
+  if (!getReadWorkerUrl()) {
+    if (errEl) errEl.textContent = "Mode invité indisponible : URL du Worker non configurée.";
+    return;
+  }
+  currentUser = { prenom: "Invité", nom: "Trésor", statut: "Invité", guest: true };
+  persistCurrentUser();
+  hideLoginModal();
+  refreshUserChip();
+  applyAdminLock();
+  applyGuestFormLock();
+  toast("Mode invité", "Accès en lecture seule à la comptabilité.", "success", 2500);
+  // Force un chargement immédiat de l'état partagé (au cas où on n'avait pas encore tiré /state).
+  loadStateFromWorker();
 }
 
 // ============================================================
@@ -620,8 +698,8 @@ function initUI() {
   initGithubUI();
   refreshAll();
 
-  // Charge l'état partagé depuis le Worker si configuré
-  if (githubConfig.workerUrl) {
+  // Charge l'état partagé depuis le Worker si configuré (ou via DEFAULT_WORKER_URL pour les invités)
+  if (getReadWorkerUrl()) {
     loadStateFromWorker();
   } else {
     setSyncStatus("offline");
@@ -2602,6 +2680,8 @@ function refreshAll() {
   refreshCart();
   refreshDevis();
   renderPrix();
+  // Verrouille les boutons rendus dynamiquement (✕, ✏️, etc.) pour les invités.
+  applyGuestFormLock();
 }
 
 // ============================================================
@@ -2882,6 +2962,7 @@ initUI();
 currentUser = loadCurrentUser();
 refreshUserChip();
 applyAdminLock();
-// Ne propose "Qui êtes-vous ?" que si le poste est déjà configuré (URL Worker présente).
+applyGuestFormLock();
+// Ne propose "Qui êtes-vous ?" que si le poste est déjà configuré (URL Worker équipe ou DEFAULT_WORKER_URL).
 // Un nouvel employé non-synchronisé doit pouvoir d'abord aller dans Paramètres.
-if (!currentUser && githubConfig.workerUrl) showLoginModal();
+if (!currentUser && getReadWorkerUrl()) showLoginModal();

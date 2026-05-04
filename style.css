@@ -254,6 +254,11 @@ textarea.shadcn-input { height: auto; min-height: 80px; }
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
 }
+.badge-warning {
+  background: rgba(234, 179, 8, 0.12);
+  color: rgb(250, 204, 21);
+  border-color: rgba(234, 179, 8, 0.25);
+}
 
 /* Stat card */
 .stat-card {
@@ -496,6 +501,50 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
 .is-locked:hover { opacity: 0.45; }
 label.is-locked,
 label.is-locked * { pointer-events: none; }
+
+/* ==========================
+   GUEST READ-ONLY MODE
+   ========================== */
+body.is-guest .tab-content button,
+body.is-guest .tab-content input,
+body.is-guest .tab-content select,
+body.is-guest .tab-content textarea {
+  cursor: not-allowed;
+}
+body.is-guest .tab-content button {
+  opacity: 0.5;
+}
+/* Bandeau lecture seule en haut */
+body.is-guest::before {
+  content: "Mode invité — lecture seule (département du Trésor)";
+  display: block;
+  background: rgba(234, 179, 8, 0.15);
+  color: rgb(250, 204, 21);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.3);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+/* Séparateur "ou" sur la modale de connexion */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: hsl(var(--border));
+}
 
 /* User chip */
 #user-chip.hidden { display: none; }

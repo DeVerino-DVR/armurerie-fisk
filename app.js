@@ -6,18 +6,18 @@ const CATALOGUE = {
     "Double Action": 20, "Cattleman": 25, "Navy": 60, "Schofield": 55, "LeMat": 80
   },
   "Pistolets": {
-    "Mauser": 55, "M1899": 55, "Volcanic": 70, "Pistolet semi-automatique": 55
+    "Mauser": 55, "M1899": 85, "Volcanic": 70, "Pistolet semi-automatique": 55
   },
   "Pompes / Fusils de chasse": {
-    "Canon scié": 45, "Double canon": 60, "Pompe à répétition": 140,
-    "Pompe": 130, "Pompe semi-auto": 160, "Éléphant": 1000
+    "Double canon": 60, "Pompe à répétition": 160,
+    "Pompe": 160, "Pompe semi-auto": 190, "Éléphant": 1000
   },
   "Carabines": {
-    "Litchfield": 115, "Petit gibier": 15,
-    "Lancaster": 105, "Evans": 90, "Carabine à répétition": 60
+    "Litchfield": 150, "Petit gibier": 15,
+    "Lancaster": 140, "Evans": 90
   },
   "Fusil": {
-    "Springfield": 70, "Verrou": 250
+    "Springfield": 70, "Verrou": 320
   },
   "Armes blanches / Lancer": {
     "Couteaux de chasse": 2, "Lasso": 2, "Lasso amélioré": 8,
@@ -26,17 +26,17 @@ const CATALOGUE = {
     "Hachette de chasseur": 11, "Bolas": 5, "Couteaux de lancer": 3
   },
   "Munitions normales": {
-    "Munitions revolver": 3, "Munitions pistolet": 3,
-    "Munitions petit gibier (fusil)": 3, "Munitions carabine": 6,
-    "Munitions pompe": 4, "Munitions fusil": 5, "Carquois flèches": 3
+    "Munitions revolver": 4, "Munitions pistolet": 4,
+    "Munitions petit gibier (fusil)": 4, "Munitions carabine": 7,
+    "Munitions pompe": 5, "Munitions fusil": 6, "Carquois flèches": 4
   },
   "Munitions spéciales": {
-    "Revolver Express": 8, "Revolver Véloce": 5, "Revolver Tête creuse": 5,
-    "Carabine Express": 11, "Carabine Véloce": 8, "Carabine Tête creuse": 8,
-    "Fusil Express": 11, "Fusil Véloce": 8, "Fusil Tête creuse": 8,
-    "Pistolet Express": 8, "Pistolet Véloce": 5, "Pistolet Tête creuse": 5,
-    "Munition éléphant": 50, "Pompe Slug": 10,
-    "Carquois empoisonné": 3, "Carquois petit gibier": 3
+    "Revolver Express": 9, "Revolver Véloce": 6, "Revolver Tête creuse": 6,
+    "Carabine Express": 12, "Carabine Véloce": 9, "Carabine Tête creuse": 9,
+    "Fusil Express": 12, "Fusil Véloce": 9, "Fusil Tête creuse": 9,
+    "Pistolet Express": 9, "Pistolet Véloce": 6, "Pistolet Tête creuse": 6,
+    "Munition éléphant": 50, "Pompe Slug": 11,
+    "Carquois empoisonné": 4, "Carquois petit gibier": 4
   },
   "Divers": {
     "Huile pour arme": 2, "Nettoyage arme": 1.5,
@@ -51,22 +51,20 @@ const OCCAS = {
   "Schofield":            {cat: 55,   rachat: 20,  revente: 0},
   "LeMat":                {cat: 80,   rachat: 40,  revente: 65},
   "Mauser":               {cat: 55,   rachat: 25,  revente: 45},
-  "M1899":                {cat: 55,   rachat: 26,  revente: 46},
+  "M1899":                {cat: 85,   rachat: 43,  revente: 72},
   "Volcanic":             {cat: 70,   rachat: 30,  revente: 55},
   "Pistolet semi-auto":   {cat: 55,   rachat: 23,  revente: 43},
-  "Canon scié":           {cat: 45,   rachat: 20,  revente: 35},
   "Double canon":         {cat: 60,   rachat: 23,  revente: 42},
-  "Pompe à répétition":   {cat: 140,  rachat: 65,  revente: 110},
-  "Pompe":                {cat: 130,  rachat: 60,  revente: 105},
-  "Pompe semi-auto":      {cat: 160,  rachat: 90,  revente: 130},
+  "Pompe à répétition":   {cat: 160,  rachat: 80,  revente: 136},
+  "Pompe":                {cat: 160,  rachat: 80,  revente: 136},
+  "Pompe semi-auto":      {cat: 190,  rachat: 95,  revente: 162},
   "Éléphant":             {cat: 1000, rachat: 150, revente: 250},
-  "Litchfield":           {cat: 115,  rachat: 60,  revente: 90},
+  "Litchfield":           {cat: 150,  rachat: 75,  revente: 128},
   "Petit gibier":         {cat: 15,   rachat: 0,   revente: 0},
   "Springfield":          {cat: 70,   rachat: 20,  revente: 40},
-  "Lancaster":            {cat: 105,  rachat: 40,  revente: 75},
+  "Lancaster":            {cat: 140,  rachat: 70,  revente: 119},
   "Evans":                {cat: 90,   rachat: 35,  revente: 70},
-  "Verrou":               {cat: 250,  rachat: 120, revente: 180},
-  "Carabine à répétition":{cat: 60,   rachat: 0,   revente: 0}
+  "Verrou":               {cat: 320,  rachat: 160, revente: 272},
 };
 
 // Matières premières suivies dans l'inventaire (ordre d'affichage)

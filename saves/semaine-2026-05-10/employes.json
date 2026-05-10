@@ -1,0 +1,103 @@
+[
+  {
+    "prenom": "Dikson",
+    "nom": "Fisk",
+    "statut": "Patron",
+    "salaire": 300,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Etienne",
+    "nom": "Lefebvre",
+    "statut": "Patron",
+    "salaire": 300,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Colette",
+    "nom": "Mcwilly",
+    "statut": "Co-patron",
+    "salaire": 300,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Julien",
+    "nom": "Lefebvre",
+    "statut": "Co-patron",
+    "salaire": 200,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Jasper",
+    "nom": "Flint",
+    "statut": "Employé",
+    "salaire": 200,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Alaric",
+    "nom": "Brynmor",
+    "statut": "Gérant",
+    "salaire": 200,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Eva",
+    "nom": "Smith",
+    "statut": "Co-patron",
+    "salaire": 200,
+    "prime": 0,
+    "heures": 0,
+    "pin": "0826"
+  },
+  {
+    "prenom": "Silas",
+    "nom": "Blackwood",
+    "statut": "Employé",
+    "salaire": 300,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "John",
+    "nom": "Taylor",
+    "statut": "Employé",
+    "salaire": 300,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Ivy",
+    "nom": "Cross",
+    "statut": "Employé",
+    "salaire": 0,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Valentina",
+    "nom": "Cross",
+    "statut": "Employé",
+    "salaire": 0,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Molly",
+    "nom": "Price",
+    "statut": "Employé",
+    "salaire": 300,
+    "prime": 0,
+    "heures": 0
+  }
+]

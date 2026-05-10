@@ -1,37 +1,11 @@
 [
   {
-    "id": 1777294743357,
-    "date": "2026-04-27",
-    "vendeur": "Eva Smith",
-    "client": "Joey Williams",
-    "arme": "Cattleman",
-    "serie": "1774827994-5075",
-    "tauxReprise": 50,
-    "prixReprise": 12.5,
-    "prixRevente": 21.25,
-    "vendue": true,
-    "info": "Aucune"
-  },
-  {
     "id": 1777323711981,
     "date": "2026-04-27",
     "vendeur": "Colette Mcwilly",
     "client": "Hank McCoy",
     "arme": "Cattleman",
     "serie": "1777069773-6401",
-    "tauxReprise": 50,
-    "prixReprise": 12.5,
-    "prixRevente": 21.25,
-    "vendue": false,
-    "info": "ras"
-  },
-  {
-    "id": 1777323729410,
-    "date": "2026-04-27",
-    "vendeur": "Colette Mcwilly",
-    "client": "Hank McCoy",
-    "arme": "Cattleman",
-    "serie": "1777069773-5059",
     "tauxReprise": 50,
     "prixReprise": 12.5,
     "prixRevente": 21.25,
@@ -48,19 +22,6 @@
     "tauxReprise": 50,
     "prixReprise": 27.5,
     "prixRevente": 46.75,
-    "vendue": false,
-    "info": ""
-  },
-  {
-    "id": 1777408164845,
-    "date": "2026-04-28",
-    "vendeur": "Silas Blackwood",
-    "client": "Tahawus Kodiak",
-    "arme": "Canon scié",
-    "serie": "1759581466-5493",
-    "tauxReprise": 50,
-    "prixReprise": 22.5,
-    "prixRevente": 38.25,
     "vendue": true,
     "info": ""
   },
@@ -74,7 +35,7 @@
     "tauxReprise": 50,
     "prixReprise": 12.5,
     "prixRevente": 21.25,
-    "vendue": false,
+    "vendue": true,
     "info": ""
   },
   {
@@ -87,7 +48,7 @@
     "tauxReprise": 40,
     "prixReprise": 10,
     "prixRevente": 21.25,
-    "vendue": false,
+    "vendue": true,
     "info": ""
   },
   {
@@ -100,7 +61,7 @@
     "tauxReprise": 50,
     "prixReprise": 125,
     "prixRevente": 212.5,
-    "vendue": false,
+    "vendue": true,
     "info": ""
   },
   {
@@ -113,7 +74,7 @@
     "tauxReprise": 50,
     "prixReprise": 125,
     "prixRevente": 212.5,
-    "vendue": false,
+    "vendue": true,
     "info": ""
   },
   {
@@ -126,6 +87,97 @@
     "tauxReprise": 50,
     "prixReprise": 125,
     "prixRevente": 212.5,
+    "vendue": true,
+    "info": ""
+  },
+  {
+    "id": 1777933041724,
+    "date": "2026-05-04",
+    "vendeur": "John Taylor",
+    "client": "Gustavo Ténébros",
+    "arme": "Volcanic",
+    "serie": "1777488389-4235",
+    "tauxReprise": 50,
+    "prixReprise": 35,
+    "prixRevente": 59.5,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1777978004487,
+    "date": "2026-05-05",
+    "vendeur": "Eva Smith",
+    "client": "Fury Campo",
+    "arme": "Mauser",
+    "serie": "1769199400-1832",
+    "tauxReprise": 50,
+    "prixReprise": 27.5,
+    "prixRevente": 46.75,
+    "vendue": true,
+    "info": ""
+  },
+  {
+    "id": 1777978012017,
+    "date": "2026-05-05",
+    "vendeur": "Eva Smith",
+    "client": "Fury Campo",
+    "arme": "Mauser",
+    "serie": "1769460967-3953",
+    "tauxReprise": 50,
+    "prixReprise": 27.5,
+    "prixRevente": 46.75,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1777978028045,
+    "date": "2026-05-05",
+    "vendeur": "Eva Smith",
+    "client": "Fury Campo",
+    "arme": "Double canon",
+    "serie": "1766004837-7305",
+    "tauxReprise": 50,
+    "prixReprise": 30,
+    "prixRevente": 51,
+    "vendue": true,
+    "info": ""
+  },
+  {
+    "id": 1778420985651,
+    "date": "2026-05-10",
+    "vendeur": "Silas Blackwood",
+    "client": "Pascal Malvoisin",
+    "arme": "Pompe",
+    "serie": "1777487893-2137",
+    "tauxReprise": 50,
+    "prixReprise": 80,
+    "prixRevente": 136,
+    "vendue": true,
+    "info": "Plus 2 $ car remise du nom d'origine"
+  },
+  {
+    "id": 1778428819825,
+    "date": "2026-05-10",
+    "vendeur": "John Taylor",
+    "client": "Jack Gaviria",
+    "arme": "Evans",
+    "serie": "1776366501-9436",
+    "tauxReprise": 50,
+    "prixReprise": 45,
+    "prixRevente": 76.5,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1778443889934,
+    "date": "2026-05-10",
+    "vendeur": "Silas Blackwood",
+    "client": "Hank McCoy",
+    "arme": "Double canon",
+    "serie": "1778095188-8637",
+    "tauxReprise": 50,
+    "prixReprise": 30,
+    "prixRevente": 51,
     "vendue": false,
     "info": ""
   }

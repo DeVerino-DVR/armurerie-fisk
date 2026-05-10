@@ -1,0 +1,17 @@
+{
+  "semaine": {
+    "semaine": 19,
+    "du": "2026-05-03",
+    "au": "2026-05-09",
+    "capital": 2808.24
+  },
+  "depensesDeductibles": [],
+  "depensesNonDeductibles": [
+    {
+      "id": 1778447842317,
+      "date": "2026-05-10",
+      "lib": "Nourritures ",
+      "mnt": 66
+    }
+  ]
+}

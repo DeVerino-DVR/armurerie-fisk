@@ -871,13 +871,17 @@
   <div class="shadcn-card p-6 mb-6">
     <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
       <div>
-        <h2 class="text-xl font-semibold tracking-tight">Historique des déclarations d'impôts</h2>
-        <p class="text-sm text-zinc-400 mt-1">
+        <h2 class="text-xl font-semibold tracking-tight" id="si-title">Historique des déclarations d'impôts</h2>
+        <p class="text-sm text-zinc-400 mt-1" id="si-subtitle">
           À chaque clic sur « Reset semaine », le récapitulatif est archivé ici.
           <span class="text-zinc-500" id="si-meta"></span>
         </p>
       </div>
-      <div class="flex gap-2 flex-wrap">
+      <div class="flex gap-2 flex-wrap items-center">
+        <div class="inline-flex rounded-md border border-zinc-800 overflow-hidden" role="tablist" aria-label="Type d'affichage">
+          <button type="button" id="si-mode-recap" class="shadcn-btn shadcn-btn-sm shadcn-btn-primary" style="border-radius:0;border:0" onclick="setSiMode('recap')">Récap Impôts</button>
+          <button type="button" id="si-mode-salaire" class="shadcn-btn shadcn-btn-sm shadcn-btn-ghost" style="border-radius:0;border:0;border-left:1px solid rgb(39 39 42)" onclick="setSiMode('salaire')">Salaire</button>
+        </div>
         <select id="si-filter-week" class="shadcn-input" style="width:auto">
           <option value="">Toutes les semaines</option>
         </select>
@@ -892,6 +896,11 @@
   </div>
 
   <div id="si-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+  <div id="si-grid-salaire" class="grid grid-cols-1 xl:grid-cols-2 gap-4 hidden"></div>
+  <div id="si-salaire-loading" class="shadcn-card p-6 text-center text-zinc-400 hidden">
+    Chargement des salaires archivés depuis GitHub...
+  </div>
+  <div id="si-salaire-error" class="shadcn-card p-6 text-center text-red-400 hidden"></div>
 </section>
 
 <!-- ============================================================

@@ -692,6 +692,7 @@ function initUI() {
   document.getElementById("i-taux-local").value = data.impots.tauxLocal;
 
   initGithubUI();
+  setSiMode(siMode);
   refreshAll();
 
   // Charge l'état partagé depuis le Worker si configuré (ou via DEFAULT_WORKER_URL pour les invités)
@@ -1558,6 +1559,7 @@ async function cloturerSemaine() {
     const weekDate = data.impots.du || today();
     const archiveMsg = `Clôture semaine ${data.impots.semaine || weekDate} (auto-archive avant reset)`;
     const json = await archiveWeekToGithub({ weekDate, msg: archiveMsg });
+    salairesHistoryData = null;
     toast(
       "Semaine archivée sur GitHub",
       `${json.count} fichier(s) commité(s). <a class="link" href="${json.folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,
@@ -1636,7 +1638,51 @@ function weekNumberOf(entry) {
   return isoWeek(d);
 }
 
+let siMode = (() => {
+  try { return localStorage.getItem("siMode") === "salaire" ? "salaire" : "recap"; }
+  catch { return "recap"; }
+})();
+
+function setSiMode(mode) {
+  if (mode !== "recap" && mode !== "salaire") mode = "recap";
+  siMode = mode;
+  try { localStorage.setItem("siMode", mode); } catch {}
+
+  const btnRecap   = document.getElementById("si-mode-recap");
+  const btnSalaire = document.getElementById("si-mode-salaire");
+  if (btnRecap) {
+    btnRecap.classList.toggle("shadcn-btn-primary", mode === "recap");
+    btnRecap.classList.toggle("shadcn-btn-ghost",   mode !== "recap");
+  }
+  if (btnSalaire) {
+    btnSalaire.classList.toggle("shadcn-btn-primary", mode === "salaire");
+    btnSalaire.classList.toggle("shadcn-btn-ghost",   mode !== "salaire");
+  }
+
+  const gridRecap   = document.getElementById("si-grid");
+  const gridSalaire = document.getElementById("si-grid-salaire");
+  if (gridRecap)   gridRecap.classList.toggle("hidden",   mode !== "recap");
+  if (gridSalaire) gridSalaire.classList.toggle("hidden", mode !== "salaire");
+
+  const title    = document.getElementById("si-title");
+  const subtitle = document.getElementById("si-subtitle");
+  if (title) {
+    title.textContent = mode === "salaire"
+      ? "Historique des salaires versés"
+      : "Historique des déclarations d'impôts";
+  }
+  if (subtitle) {
+    subtitle.innerHTML = mode === "salaire"
+      ? `Salaires archivés sur GitHub à chaque clôture de semaine. <span class="text-zinc-500" id="si-meta"></span>`
+      : `À chaque clic sur « Reset semaine », le récapitulatif est archivé ici. <span class="text-zinc-500" id="si-meta"></span>`;
+  }
+
+  refreshImpotsHistory();
+}
+
 function refreshImpotsHistory() {
+  if (siMode === "salaire") return renderSalairesHistory();
+
   const grid = document.getElementById("si-grid");
   if (!grid) return;
   const sortSel   = document.getElementById("si-sort");
@@ -1728,6 +1774,189 @@ function delImpotsHistory(id) {
   data.impotsHistory = (data.impotsHistory || []).filter(h => h.id !== id);
   saveData();
   refreshImpotsHistory();
+}
+
+// ============================================================
+// SAVE IMPOTS · vue Salaire — récupère employes.json par semaine sur GitHub
+// ============================================================
+let salairesHistoryData = null;
+let salairesHistoryLoadPromise = null;
+
+async function loadSalairesHistory(force = false) {
+  if (salairesHistoryData && !force) return salairesHistoryData;
+  if (salairesHistoryLoadPromise) return salairesHistoryLoadPromise;
+
+  const loading = document.getElementById("si-salaire-loading");
+  const errorEl = document.getElementById("si-salaire-error");
+  const grid    = document.getElementById("si-grid-salaire");
+  loading?.classList.remove("hidden");
+  errorEl?.classList.add("hidden");
+  if (grid) grid.innerHTML = "";
+
+  salairesHistoryLoadPromise = (async () => {
+    const apiUrl = `https://api.github.com/repos/${SAVES_GH_OWNER}/${SAVES_GH_REPO}/contents/saves?ref=${SAVES_GH_BRANCH}`;
+    const listRes = await fetch(apiUrl);
+    if (!listRes.ok) {
+      if (listRes.status === 403) throw new Error("Limite API GitHub atteinte. Réessaye dans une heure.");
+      if (listRes.status === 404) throw new Error("Aucune sauvegarde trouvée sur le repo.");
+      throw new Error(`API GitHub: ${listRes.status}`);
+    }
+    const list = await listRes.json();
+    const weeks = list
+      .filter(item => item.type === "dir" && item.name.startsWith("semaine-"))
+      .map(item => item.name)
+      .sort()
+      .reverse();
+
+    const fetchJson = async (week, file) => {
+      const url = `https://raw.githubusercontent.com/${SAVES_GH_OWNER}/${SAVES_GH_REPO}/${SAVES_GH_BRANCH}/saves/${week}/${file}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      try { return await res.json(); } catch { return null; }
+    };
+
+    const entries = await Promise.all(weeks.map(async week => {
+      const [employes, impots] = await Promise.all([
+        fetchJson(week, "employes.json"),
+        fetchJson(week, "impots.json")
+      ]);
+      const folderDate = week.replace("semaine-", "");
+      const semaineFromImpot = impots?.semaine?.semaine;
+      const du = impots?.semaine?.du || "";
+      const au = impots?.semaine?.au || "";
+      let wkNum = null;
+      if (semaineFromImpot != null && semaineFromImpot !== "") {
+        const n = Number(semaineFromImpot);
+        if (!Number.isNaN(n) && n > 0) wkNum = n;
+      }
+      if (wkNum == null && folderDate) {
+        const d = new Date(folderDate);
+        if (!Number.isNaN(d.getTime())) wkNum = isoWeek(d);
+      }
+      return {
+        folder: week,
+        folderDate,
+        du, au,
+        _wk: wkNum,
+        employes: Array.isArray(employes) ? employes : []
+      };
+    }));
+
+    salairesHistoryData = entries.filter(e => e.employes.length);
+    return salairesHistoryData;
+  })();
+
+  try {
+    return await salairesHistoryLoadPromise;
+  } catch (err) {
+    salairesHistoryData = null;
+    if (errorEl) {
+      errorEl.textContent = `Erreur de chargement : ${err.message}`;
+      errorEl.classList.remove("hidden");
+    }
+    throw err;
+  } finally {
+    salairesHistoryLoadPromise = null;
+    loading?.classList.add("hidden");
+  }
+}
+
+function renderSalairesHistory() {
+  const grid = document.getElementById("si-grid-salaire");
+  if (!grid) return;
+
+  if (!salairesHistoryData) {
+    loadSalairesHistory().then(() => renderSalairesHistory()).catch(() => {});
+    return;
+  }
+
+  const sortSel   = document.getElementById("si-sort");
+  const filterSel = document.getElementById("si-filter-week");
+  const sortMode    = sortSel   ? sortSel.value   : "semaine-desc";
+  const filterValue = filterSel ? filterSel.value : "";
+
+  if (filterSel) {
+    const uniques = [...new Set(salairesHistoryData.map(e => e._wk).filter(n => n != null))].sort((a, b) => a - b);
+    const current = filterSel.value;
+    filterSel.innerHTML = `<option value="">Toutes les semaines</option>`
+      + uniques.map(n => `<option value="${n}">Semaine ${n}</option>`).join("");
+    if (current && uniques.includes(Number(current))) filterSel.value = current;
+  }
+
+  const list = salairesHistoryData.filter(e => !filterValue || String(e._wk) === String(filterValue));
+  const cmp = (a, b) => {
+    if (sortMode === "semaine-asc")  return (a._wk||0) - (b._wk||0);
+    if (sortMode === "semaine-desc") return (b._wk||0) - (a._wk||0);
+    if (sortMode === "date-asc")     return (a.folderDate||"").localeCompare(b.folderDate||"");
+    if (sortMode === "date-desc")    return (b.folderDate||"").localeCompare(a.folderDate||"");
+    return 0;
+  };
+  list.sort(cmp);
+
+  const meta = document.getElementById("si-meta");
+  if (meta) {
+    if (!salairesHistoryData.length) {
+      meta.textContent = " · Aucun salaire archivé sur GitHub pour le moment.";
+    } else if (filterValue) {
+      meta.textContent = ` · ${list.length} semaine(s) pour la semaine ${filterValue} (sur ${salairesHistoryData.length} archivée(s))`;
+    } else {
+      meta.textContent = ` · ${salairesHistoryData.length} semaine(s) archivée(s) sur GitHub`;
+    }
+  }
+
+  const fmtPeriod = (du, au) => {
+    if (!du && !au) return "—";
+    const f = s => s ? s.split("-").reverse().join("/") : "";
+    return `${f(du)} → ${f(au)}`;
+  };
+  const fmtDate = s => s ? s.split("-").reverse().join("/") : "—";
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="shadcn-card p-6 text-center text-zinc-500 xl:col-span-2">${salairesHistoryData.length ? "Aucune semaine ne correspond à ce filtre." : "Aucun salaire archivé sur GitHub."}</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(entry => {
+    const rows = entry.employes.map((e, i) => {
+      const s = Number(e.salaire)||0;
+      const p = Number(e.prime)||0;
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${e.prenom||""} ${e.nom||""}</td>
+        <td>${e.statut||""}</td>
+        <td>${e.heures||0}</td>
+        <td>${fmt(s)}</td>
+        <td>${fmt(p)}</td>
+        <td class="text-right"><b>${fmt(s+p)}</b></td>
+      </tr>`;
+    }).join("");
+    const totalSal = entry.employes.reduce((acc,e) => acc + (Number(e.salaire)||0) + (Number(e.prime)||0), 0);
+    return `
+      <div class="shadcn-card p-5">
+        <div class="flex items-start justify-between mb-3 gap-2">
+          <div>
+            <h3 class="text-base font-semibold tracking-tight">${entry._wk != null ? "Semaine " + entry._wk : "Semaine —"}</h3>
+            <p class="text-xs text-zinc-400 mono mt-0.5">${fmtPeriod(entry.du, entry.au)}</p>
+            <p class="text-xs text-zinc-500 mt-0.5">Archivée le ${fmtDate(entry.folderDate)}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-zinc-500">Total versé</p>
+            <p class="mono font-semibold text-zinc-50">${fmt(totalSal)}</p>
+          </div>
+        </div>
+        <div class="overflow-hidden rounded-md border border-zinc-800">
+          <div class="overflow-auto max-h-[400px]">
+            <table class="shadcn-table">
+              <thead>
+                <tr><th>#</th><th>Employé</th><th>Statut</th><th>Heures</th><th>Salaire</th><th>Prime</th><th class="text-right">Total</th></tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 // ============================================================
@@ -2226,6 +2455,7 @@ async function pushWeekToGithub() {
     const weekDate = document.getElementById("gh-week-date").value || today();
     const msg = (document.getElementById("gh-commit-msg").value || `Sauvegarde semaine ${weekDate}`).trim();
     const json = await archiveWeekToGithub({ weekDate, msg });
+    salairesHistoryData = null;
     toast(
       "Semaine archivée sur GitHub",
       `${json.count} fichier(s) commité(s). <a class="link" href="${json.folderUrl}" target="_blank" rel="noreferrer">Ouvrir sur GitHub</a>`,

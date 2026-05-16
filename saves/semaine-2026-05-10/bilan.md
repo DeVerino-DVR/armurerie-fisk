@@ -1,4 +1,4 @@
-# Bilan semaine · 2026-05-03
+# Bilan semaine · 2026-05-10
 
 **Carcan'hoes — L'armurerie des Fisk**
 
@@ -22,4 +22,4 @@
 - Armes d'occas stock : 4 (vendues : 10)
 - Employés : 12
 
-*Généré automatiquement le 10/05/2026 21:21:24*
+*Généré automatiquement le 10/05/2026 21:20:02*

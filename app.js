@@ -213,6 +213,7 @@ function loadData() {
       if (!Array.isArray(parsed.armesPerso)) parsed.armesPerso = [];
       if (!Array.isArray(parsed.partenaires)) parsed.partenaires = [];
       if (!Array.isArray(parsed.impotsHistory)) parsed.impotsHistory = [];
+      if (!parsed.salairesOverrides || typeof parsed.salairesOverrides !== "object") parsed.salairesOverrides = {};
       return parsed;
     } catch(e) {}
   }
@@ -227,6 +228,7 @@ function loadData() {
     partenaires: [],
     impots: { semaine: "", du: "", au: "", capital: 0, tauxLocal: 15 },
     impotsHistory: [],
+    salairesOverrides: {},
     inventory: emptyInventory()
   };
 }
@@ -296,6 +298,15 @@ async function loadStateFromWorker() {
     MATERIALS.forEach(m => { if (!(m.id in data.inventory)) data.inventory[m.id] = 0; });
     if (!Array.isArray(data.armesPerso)) data.armesPerso = [];
     if (!Array.isArray(data.impotsHistory)) data.impotsHistory = [];
+    if (!data.salairesOverrides || typeof data.salairesOverrides !== "object") data.salairesOverrides = {};
+    // Le KV peut contenir une ancienne semaine (jamais rafraîchie). On force la semaine courante
+    // pour que la page Impôts et la Clôture utilisent toujours les bonnes dates.
+    if (data.impots) {
+      const wkNow = currentWeekRange();
+      data.impots.semaine = wkNow.semaine;
+      data.impots.du = wkNow.du;
+      data.impots.au = wkNow.au;
+    }
     lastRemoteVersion = meta?.version || 0;
     saveDataLocalOnly();
     refreshAll();
@@ -1556,6 +1567,12 @@ async function cloturerSemaine() {
   const origLabel = resetBtn ? resetBtn.innerHTML : null;
   if (resetBtn) { resetBtn.disabled = true; resetBtn.innerHTML = '<span class="spinner"></span> Archivage GitHub…'; }
   try {
+    // Force le recalcul de la semaine courante : data.impots peut être obsolète
+    // (loadStateFromWorker écrase ces champs avec d'anciennes valeurs venues du KV).
+    const wkNow = currentWeekRange();
+    data.impots.semaine = wkNow.semaine;
+    data.impots.du = wkNow.du;
+    data.impots.au = wkNow.au;
     const weekDate = data.impots.du || today();
     const archiveMsg = `Clôture semaine ${data.impots.semaine || weekDate} (auto-archive avant reset)`;
     const json = await archiveWeekToGithub({ weekDate, msg: archiveMsg });
@@ -1744,7 +1761,10 @@ function refreshImpotsHistory() {
           <p class="text-xs text-zinc-400 mono mt-0.5">${fmtPeriod(h.du, h.au)}</p>
           <p class="text-xs text-zinc-500 mt-0.5">Déclarée le ${fmtDate(h.dateDeclaration)}</p>
         </div>
-        <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delImpotsHistory(${h.id})" title="Supprimer">✕</button>
+        <div class="flex gap-1">
+          <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon" onclick="editImpotsHistory(${h.id})" title="Modifier la semaine">✎</button>
+          <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon text-red-600 hover:bg-red-50 hover:border-red-200" onclick="delImpotsHistory(${h.id})" title="Supprimer">✕</button>
+        </div>
       </div>
       <div class="space-y-1">
         <div class="recap-row"><span class="text-zinc-400">Capital début de semaine</span><span class="recap-value">${fmt(h.capital)}</span></div>
@@ -1774,6 +1794,27 @@ function delImpotsHistory(id) {
   data.impotsHistory = (data.impotsHistory || []).filter(h => h.id !== id);
   saveData();
   refreshImpotsHistory();
+}
+
+function editImpotsHistory(id) {
+  if (!requireAdmin()) return;
+  const entry = (data.impotsHistory || []).find(h => h.id === id);
+  if (!entry) return;
+
+  const newSem = prompt("Numéro de semaine :", entry.semaine != null ? String(entry.semaine) : "");
+  if (newSem === null) return;
+  const newDu = prompt("Date de début (AAAA-MM-JJ) :", entry.du || "");
+  if (newDu === null) return;
+  const newAu = prompt("Date de fin (AAAA-MM-JJ) :", entry.au || "");
+  if (newAu === null) return;
+
+  const semNum = Number(String(newSem).trim());
+  entry.semaine = Number.isFinite(semNum) && semNum > 0 ? semNum : String(newSem).trim();
+  entry.du = String(newDu).trim();
+  entry.au = String(newAu).trim();
+  saveData();
+  refreshImpotsHistory();
+  toast("Ligne mise à jour", `Semaine ${entry.semaine} · ${entry.du} → ${entry.au}`, "success", 4000);
 }
 
 // ============================================================
@@ -1833,10 +1874,19 @@ async function loadSalairesHistory(force = false) {
         const d = new Date(folderDate);
         if (!Number.isNaN(d.getTime())) wkNum = isoWeek(d);
       }
+      // Override local (édition manuelle) : remplace les valeurs lues depuis GitHub.
+      const ov = (data.salairesOverrides || {})[week];
+      if (ov) {
+        if (ov.semaine != null && ov.semaine !== "") {
+          const n = Number(ov.semaine);
+          if (!Number.isNaN(n) && n > 0) wkNum = n;
+        }
+      }
       return {
         folder: week,
         folderDate,
-        du, au,
+        du: ov?.du || du,
+        au: ov?.au || au,
         _wk: wkNum,
         employes: Array.isArray(employes) ? employes : []
       };
@@ -1913,6 +1963,7 @@ function renderSalairesHistory() {
 
   if (!list.length) {
     grid.innerHTML = `<div class="shadcn-card p-6 text-center text-zinc-500 xl:col-span-2">${salairesHistoryData.length ? "Aucune semaine ne correspond à ce filtre." : "Aucun salaire archivé sur GitHub."}</div>`;
+    applyAdminLock();
     return;
   }
 
@@ -1939,9 +1990,12 @@ function renderSalairesHistory() {
             <p class="text-xs text-zinc-400 mono mt-0.5">${fmtPeriod(entry.du, entry.au)}</p>
             <p class="text-xs text-zinc-500 mt-0.5">Archivée le ${fmtDate(entry.folderDate)}</p>
           </div>
-          <div class="text-right">
-            <p class="text-xs text-zinc-500">Total versé</p>
-            <p class="mono font-semibold text-zinc-50">${fmt(totalSal)}</p>
+          <div class="text-right flex items-start gap-2">
+            <button data-admin-only class="shadcn-btn shadcn-btn-outline shadcn-btn-sm shadcn-btn-icon" onclick="editSalaireSemaine('${entry.folder}')" title="Modifier la semaine">✎</button>
+            <div>
+              <p class="text-xs text-zinc-500">Total versé</p>
+              <p class="mono font-semibold text-zinc-50">${fmt(totalSal)}</p>
+            </div>
           </div>
         </div>
         <div class="overflow-hidden rounded-md border border-zinc-800">
@@ -1957,6 +2011,36 @@ function renderSalairesHistory() {
       </div>
     `;
   }).join("");
+  applyAdminLock();
+}
+
+function editSalaireSemaine(folder) {
+  if (!requireAdmin()) return;
+  if (!data.salairesOverrides || typeof data.salairesOverrides !== "object") data.salairesOverrides = {};
+  const entry = (salairesHistoryData || []).find(e => e.folder === folder);
+  if (!entry) return;
+
+  const newSem = prompt("Numéro de semaine :", entry._wk != null ? String(entry._wk) : "");
+  if (newSem === null) return;
+  const newDu = prompt("Date de début (AAAA-MM-JJ) :", entry.du || "");
+  if (newDu === null) return;
+  const newAu = prompt("Date de fin (AAAA-MM-JJ) :", entry.au || "");
+  if (newAu === null) return;
+
+  const semNum = Number(String(newSem).trim());
+  const ov = {
+    semaine: Number.isFinite(semNum) && semNum > 0 ? semNum : String(newSem).trim(),
+    du: String(newDu).trim(),
+    au: String(newAu).trim()
+  };
+  data.salairesOverrides[folder] = ov;
+  saveData();
+  // Refresh local sans re-fetch GitHub : applique l'override à l'entry déjà en mémoire.
+  if (Number.isFinite(semNum) && semNum > 0) entry._wk = semNum;
+  entry.du = ov.du || entry.du;
+  entry.au = ov.au || entry.au;
+  renderSalairesHistory();
+  toast("Semaine mise à jour", `Semaine ${ov.semaine} · ${ov.du} → ${ov.au}`, "success", 4000);
 }
 
 // ============================================================

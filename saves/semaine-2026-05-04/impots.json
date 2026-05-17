@@ -1,0 +1,120 @@
+{
+  "semaine": {
+    "semaine": 19,
+    "du": "2026-05-04",
+    "au": "2026-05-10",
+    "capital": 4609.13
+  },
+  "depensesDeductibles": [
+    {
+      "id": 1778526926388,
+      "date": "2026-05-11",
+      "lib": "Charbon",
+      "mnt": 15,
+      "matItem": "coal",
+      "matQty": 500
+    },
+    {
+      "id": 1778526948734,
+      "date": "2026-05-11",
+      "lib": "Minerai de fer",
+      "mnt": 30,
+      "matItem": "iron",
+      "matQty": 1000
+    },
+    {
+      "id": 1778526972808,
+      "date": "2026-05-11",
+      "lib": "Lingot de fer",
+      "mnt": 1000,
+      "matItem": "iron_ingot",
+      "matQty": 200
+    },
+    {
+      "id": 1778526989405,
+      "date": "2026-05-11",
+      "lib": "Lingot de cuivre",
+      "mnt": 375,
+      "matItem": "copper_ingot",
+      "matQty": 50
+    },
+    {
+      "id": 1778527013297,
+      "date": "2026-05-11",
+      "lib": "Sac de charbon",
+      "mnt": 50,
+      "matItem": "charcoal_bag",
+      "matQty": 50
+    },
+    {
+      "id": 1778689420610,
+      "date": "2026-05-13",
+      "lib": "Lingot de cuivre",
+      "mnt": 1500,
+      "matItem": "copper_ingot",
+      "matQty": 200
+    },
+    {
+      "id": 1778689441618,
+      "date": "2026-05-13",
+      "lib": "Arcs + carquois",
+      "mnt": 175
+    },
+    {
+      "id": 1778689545927,
+      "date": "2026-05-13",
+      "lib": "Planche",
+      "mnt": 65.55,
+      "matItem": "wood_plank",
+      "matQty": 1000
+    },
+    {
+      "id": 1778865455256,
+      "date": "2026-05-15",
+      "lib": "Sac de charbon",
+      "mnt": 200,
+      "matItem": "charcoal_bag",
+      "matQty": 200
+    },
+    {
+      "id": 1778865468730,
+      "date": "2026-05-15",
+      "lib": "Minerai de fer",
+      "mnt": 30,
+      "matItem": "iron",
+      "matQty": 1000
+    },
+    {
+      "id": 1778865483029,
+      "date": "2026-05-15",
+      "lib": "Charbon",
+      "mnt": 30,
+      "matItem": "coal",
+      "matQty": 1000
+    },
+    {
+      "id": 1778865500152,
+      "date": "2026-05-15",
+      "lib": "Lingot de cuivre",
+      "mnt": 750,
+      "matItem": "copper_ingot",
+      "matQty": 100
+    },
+    {
+      "id": 1778865512341,
+      "date": "2026-05-15",
+      "lib": "Lingot de fer",
+      "mnt": 1000,
+      "matItem": "iron_ingot",
+      "matQty": 200
+    }
+  ],
+  "depensesNonDeductibles": [
+    {
+      "id": 1778503047298,
+      "date": "2026-05-11",
+      "lib": "Repas Saloon St Denis (contrat)",
+      "mnt": 65.55
+    }
+  ]
+}

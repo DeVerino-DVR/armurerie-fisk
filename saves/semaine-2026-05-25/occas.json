@@ -1,18 +1,5 @@
 [
   {
-    "id": 1778443889934,
-    "date": "2026-05-10",
-    "vendeur": "Silas Blackwood",
-    "client": "Hank McCoy",
-    "arme": "Double canon",
-    "serie": "1778095188-8637",
-    "tauxReprise": 50,
-    "prixReprise": 30,
-    "prixRevente": 51,
-    "vendue": true,
-    "info": ""
-  },
-  {
     "id": 1778766181717,
     "date": "2026-05-14",
     "vendeur": "Silas Blackwood",
@@ -39,19 +26,6 @@
     "info": ""
   },
   {
-    "id": 1779192047262,
-    "date": "2026-05-19",
-    "vendeur": "Silas Blackwood",
-    "client": "",
-    "arme": "Cattleman",
-    "serie": "1759794689-6380",
-    "tauxReprise": 40,
-    "prixReprise": 10,
-    "prixRevente": 21.25,
-    "vendue": true,
-    "info": ""
-  },
-  {
     "id": 1779192057164,
     "date": "2026-05-19",
     "vendeur": "Silas Blackwood",
@@ -62,19 +36,6 @@
     "prixReprise": 10,
     "prixRevente": 21.25,
     "vendue": false,
-    "info": ""
-  },
-  {
-    "id": 1779192066094,
-    "date": "2026-05-19",
-    "vendeur": "Silas Blackwood",
-    "client": "",
-    "arme": "Cattleman",
-    "serie": "1762822219-7399",
-    "tauxReprise": 40,
-    "prixReprise": 10,
-    "prixRevente": 21.25,
-    "vendue": true,
     "info": ""
   },
   {

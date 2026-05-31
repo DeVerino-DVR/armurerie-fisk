@@ -12,7 +12,7 @@
     "prenom": "Etienne",
     "nom": "Lefebvre",
     "statut": "Patron",
-    "salaire": 300,
+    "salaire": 0,
     "pin": "0826",
     "prime": 0,
     "heures": 0
@@ -21,7 +21,7 @@
     "prenom": "Colette",
     "nom": "Mcwilly",
     "statut": "Co-patron",
-    "salaire": 300,
+    "salaire": 0,
     "pin": "0826",
     "prime": 0,
     "heures": 0
@@ -30,7 +30,7 @@
     "prenom": "Jasper",
     "nom": "Flint",
     "statut": "Employé",
-    "salaire": 100,
+    "salaire": 0,
     "prime": 0,
     "heures": 0
   },
@@ -46,7 +46,7 @@
     "prenom": "Silas",
     "nom": "Blackwood",
     "statut": "Employé",
-    "salaire": 300,
+    "salaire": 0,
     "prime": 0,
     "heures": 0
   },

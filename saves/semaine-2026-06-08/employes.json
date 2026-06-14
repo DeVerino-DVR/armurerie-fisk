@@ -1,0 +1,43 @@
+[
+  {
+    "prenom": "Dikson",
+    "nom": "Fisk",
+    "statut": "Patron",
+    "salaire": 300,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Etienne",
+    "nom": "Lefebvre",
+    "statut": "Patron",
+    "salaire": 300,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Colette",
+    "nom": "Mcwilly",
+    "statut": "Co-patron",
+    "salaire": 0,
+    "pin": "0826",
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Molly",
+    "nom": "Price",
+    "statut": "Employé",
+    "salaire": 300,
+    "prime": 0,
+    "heures": 0
+  },
+  {
+    "prenom": "Clarisse",
+    "nom": "Mariani",
+    "statut": "Employé",
+    "salaire": 100
+  }
+]

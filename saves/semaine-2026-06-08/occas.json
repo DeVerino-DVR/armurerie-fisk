@@ -1,0 +1,93 @@
+[
+  {
+    "id": 1778766181717,
+    "date": "2026-05-14",
+    "vendeur": "Silas Blackwood",
+    "client": "Eliah Brown",
+    "arme": "Schofield",
+    "serie": "1778068594-4594",
+    "tauxReprise": 50,
+    "prixReprise": 27.5,
+    "prixRevente": 46.75,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1779048891068,
+    "date": "2026-05-17",
+    "vendeur": "Silas Blackwood",
+    "client": "Rick Mandy",
+    "arme": "Schofield",
+    "serie": "1778356352-2316",
+    "tauxReprise": 40,
+    "prixReprise": 22,
+    "prixRevente": 46.75,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1779192057164,
+    "date": "2026-05-19",
+    "vendeur": "Silas Blackwood",
+    "client": "",
+    "arme": "Cattleman",
+    "serie": "1768296030-6072",
+    "tauxReprise": 40,
+    "prixReprise": 10,
+    "prixRevente": 21.25,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1779469590534,
+    "date": "2026-05-22",
+    "vendeur": "Silas Blackwood",
+    "client": "Kayne Blackwood",
+    "arme": "Double canon",
+    "serie": "1778095188-8637",
+    "tauxReprise": 45,
+    "prixReprise": 27,
+    "prixRevente": 51,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1780704708284,
+    "date": "2026-06-06",
+    "vendeur": "Molly Price",
+    "client": "Peter Debow ",
+    "arme": "Navy",
+    "serie": "1778973847-6037",
+    "tauxReprise": 50,
+    "prixReprise": 30,
+    "prixRevente": 51,
+    "vendue": false,
+    "info": ""
+  },
+  {
+    "id": 1780705178691,
+    "date": "2026-06-06",
+    "vendeur": "Molly Price",
+    "client": "Charles Mariani ",
+    "arme": "Navy",
+    "serie": "1778018128-8424",
+    "tauxReprise": 50,
+    "prixReprise": 30,
+    "prixRevente": 51,
+    "vendue": true,
+    "info": ""
+  },
+  {
+    "id": 1780962980883,
+    "date": "2026-06-08",
+    "vendeur": "Molly Price",
+    "client": "Violette Lefevre",
+    "arme": "Navy",
+    "serie": "1778973847-6037",
+    "tauxReprise": 50,
+    "prixReprise": 30,
+    "prixRevente": 51,
+    "vendue": false,
+    "info": ""
+  }
+]

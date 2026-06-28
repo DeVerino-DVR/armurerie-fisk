@@ -1,0 +1,23 @@
+{
+  "semaine": {
+    "semaine": 26,
+    "du": "2026-06-22",
+    "au": "2026-06-28",
+    "capital": 5428.75
+  },
+  "depensesDeductibles": [
+    {
+      "id": 1782332960525,
+      "date": "2026-06-24",
+      "lib": "Arcs + carquois",
+      "mnt": 310
+    },
+    {
+      "id": 1782416139236,
+      "date": "2026-06-25",
+      "lib": "Minerai de fer",
+      "mnt": 620
+    }
+  ],
+  "depensesNonDeductibles": []
+}
